@@ -34,3 +34,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.env.local
+__pycache__/
+venv/
+.venv/
+chroma_data/
+node_modules/
+.next/
+

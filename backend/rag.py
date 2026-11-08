@@ -13,7 +13,7 @@ if not os.getenv("GEMINI_API_KEY"):
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 db = chromadb.PersistentClient(path="chroma_data")
 
-CHAT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+CHAT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 CHUNK_WORDS = 400
 OVERLAP = 50

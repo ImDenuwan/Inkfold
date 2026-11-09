@@ -26,15 +26,28 @@ def upload():
     if not file or not file.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Please upload a PDF file."}), 400
 
-    doc_id = uuid.uuid4().hex
     try:
-        text = rag.index_pdf(doc_id, file.read())
+        pages = rag.read_pdf(file.read())
     except ValueError as e:
         return jsonify({"error": str(e)}), 422
 
-    return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": rag.summarize(text)})
+    force = request.form.get("force") == "true"
 
+    # free keyword check first, so a CV or bill never reaches Gemini
+    if not force and not rag.looks_like_paper(pages):
+        return not_paper()
 
+    summary = rag.summarize(pages, force)
+    if not force and not summary.get("is_research_paper", True):
+        return not_paper()
+
+    doc_id = uuid.uuid4().hex
+    rag.index_pdf(doc_id, pages)
+    return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": summary})
+
+def not_paper():
+    return jsonify({"error": "This doesn't look like a research paper.", "not_paper": True}), 422
+    
 @app.post("/ask")
 def ask():
     data = request.get_json(silent=True) or {}
@@ -52,6 +65,11 @@ def ask():
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({"error": "The file is larger than 25 MB."}), 413
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({"error": "Something went wrong on our side. Please try again."}), 500
 
 
 @app.errorhandler(errors.APIError)

@@ -1,8 +1,15 @@
 SUMMARY_PROMPT = """You are an expert research assistant helping university students understand academic papers.
 
-Your task is to read the research paper text below and write a structured summary of it.
+You will receive the text of a PDF. First decide what kind of document it is. If it is a research paper, write a structured summary of it.
 
-## Rules
+## Step 1: Check it is a research paper
+- "is_research_paper" is true for academic research papers, journal or conference articles, preprints (for example arXiv), theses and technical reports that present research with methods and findings.
+- It is false for anything else, such as a CV or resume, a bill or invoice, a receipt, lecture slides, a textbook chapter, an assignment brief, a form, a letter, a news article or a manual.
+- If "is_research_paper" is false, set every other text field to an empty string, "authors" to an empty list and "suggested_questions" to an empty list. Stop there.
+{force_note}
+
+## Step 2: Summarise the research paper
+Rules:
 1. Use ONLY information found in the paper text. Never add facts from your own knowledge, even if you recognise the paper.
 2. Write in clear, plain English that a first-year university student can follow. Explain technical terms briefly the first time they appear.
 3. Be specific. Include the real names of methods, models, datasets and metrics, and include exact numbers for results whenever the paper gives them.
@@ -11,28 +18,31 @@ Your task is to read the research paper text below and write a structured summar
 6. Do not use markdown, bullet points or headings inside the values. Plain sentences only.
 7. The text contains page markers like [Page 3]. Ignore them in your output.
 
-## What each section must contain
+What each field must contain:
 - "title": The exact title of the paper, as written on the first page.
-- "authors": A list of every author's full name, in the order they appear. Do not include affiliations or emails. If no authors are listed, return an empty list.
+- "authors": A list of every author's full name, in the order they appear. No affiliations or emails. If none are listed, return an empty list.
 - "abstract": What the paper is about and what it achieves, in 2 to 4 sentences. Base it on the paper's abstract if it has one.
 - "problem_statement": The problem or gap the paper addresses, and why it matters, in 2 to 4 sentences.
-- "methodology": How the authors approached the problem: the method, model, data, and experimental setup, in 3 to 5 sentences.
+- "methodology": How the authors approached the problem: the method, model, data and experimental setup, in 3 to 5 sentences.
 - "key_results": The most important findings, with numbers and comparisons to previous work where given, in 3 to 5 sentences.
 - "conclusion": What the authors conclude, plus any limitations or future work they mention, in 2 to 4 sentences.
+- "suggested_questions": Exactly 3 short, specific questions a student might ask about this paper. Each must be answerable from the paper text and under 12 words. Make them different from each other, for example one about the method, one about the results and one about limitations or data.
 
 ## Output format
 Return ONLY a valid JSON object with exactly these keys and no others:
 {{
+  "is_research_paper": true,
   "title": "string",
   "authors": ["string", "string"],
   "abstract": "string",
   "problem_statement": "string",
   "methodology": "string",
   "key_results": "string",
-  "conclusion": "string"
+  "conclusion": "string",
+  "suggested_questions": ["string", "string", "string"]
 }}
 
-## Paper text
+## Document text
 {text}"""
 
 
@@ -56,3 +66,6 @@ Below are the passages from the paper that are most relevant to the question. Ea
 
 ## Student's question
 {question}"""
+
+FORCE_NOTE = """- IMPORTANT: The user has chosen to continue anyway. Set "is_research_paper" to true and fill in every field as well as you can from the document, even if it is not a research paper. Where a section does not fit the document, write "Not stated in the paper."
+"""

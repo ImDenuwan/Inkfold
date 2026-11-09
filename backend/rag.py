@@ -1,11 +1,12 @@
 import json
 import os
+import re
 
 import chromadb
 import pymupdf
 from google import genai
 
-from prompts import ANSWER_PROMPT, SUMMARY_PROMPT
+from prompts import ANSWER_PROMPT, FORCE_NOTE, SUMMARY_PROMPT
 
 if not os.getenv("GEMINI_API_KEY"):
     raise RuntimeError("Add GEMINI_API_KEY to backend/.env")
@@ -30,7 +31,7 @@ def generate(prompt, as_json=False):
     return client.models.generate_content(model=CHAT_MODEL, contents=prompt, config=config).text
 
 
-def extract_pages(pdf_bytes):
+def read_pdf(pdf_bytes):
     try:
         doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
     except Exception:
@@ -42,6 +43,14 @@ def extract_pages(pdf_bytes):
         raise ValueError("No text found. It may be a scanned PDF.")
     return pages
 
+PAPER_SIGNS = ["abstract", "introduction", "references", "bibliography", "related work",
+               "methodology", "experiment", "conclusion", "doi", "arxiv", "et al"]
+
+
+def looks_like_paper(pages):
+    """Free check before calling Gemini: real papers use most of these words."""
+    text = " ".join(t for _, t in pages).lower()
+    return sum(sign in text for sign in PAPER_SIGNS) >= 3
 
 def chunk(pages):
     chunks = []
@@ -52,8 +61,13 @@ def chunk(pages):
     return chunks
 
 
-def index_pdf(doc_id, pdf_bytes):
-    pages = extract_pages(pdf_bytes)
+def summarize(pages, force=False):
+    text = "\n\n".join(f"[Page {num}]\n{t}" for num, t in pages)
+    prompt = SUMMARY_PROMPT.format(text=text[:120_000], force_note=FORCE_NOTE if force else "")
+    return json.loads(generate(prompt, as_json=True))
+
+
+def index_pdf(doc_id, pages):
     chunks = chunk(pages)
     collection = db.get_or_create_collection(doc_id)
 
@@ -66,12 +80,6 @@ def index_pdf(doc_id, pdf_bytes):
             embeddings=embed([c["text"] for c in batch]),
             metadatas=[{"page": c["page"]} for c in batch],
         )
-    return "\n\n".join(f"[Page {num}]\n{text}" for num, text in pages)
-
-
-def summarize(full_text):
-    reply = generate(SUMMARY_PROMPT.format(text=full_text[:120_000]), as_json=True)
-    return json.loads(reply)
 
 
 def ask(doc_id, question):
@@ -86,4 +94,7 @@ def ask(doc_id, question):
 
     context = "\n\n".join(f"[Page {p}] {t}" for p, t in zip(pages, passages))
     answer = generate(ANSWER_PROMPT.format(context=context, question=question))
-    return {"answer": answer, "sources": sorted(set(pages))}
+
+    # only return the pages the answer actually cites
+    cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)}
+    return {"answer": answer, "sources": sorted(cited & set(pages))}

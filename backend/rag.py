@@ -1,5 +1,6 @@
 import json
 import os
+import re
 
 import chromadb
 import pymupdf
@@ -30,7 +31,7 @@ def generate(prompt, as_json=False):
     return client.models.generate_content(model=CHAT_MODEL, contents=prompt, config=config).text
 
 
-def extract_pages(pdf_bytes):
+def read_pdf(pdf_bytes):
     try:
         doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
     except Exception:
@@ -52,8 +53,12 @@ def chunk(pages):
     return chunks
 
 
-def index_pdf(doc_id, pdf_bytes):
-    pages = extract_pages(pdf_bytes)
+def summarize(pages):
+    text = "\n\n".join(f"[Page {num}]\n{t}" for num, t in pages)
+    return json.loads(generate(SUMMARY_PROMPT.format(text=text[:120_000]), as_json=True))
+
+
+def index_pdf(doc_id, pages):
     chunks = chunk(pages)
     collection = db.get_or_create_collection(doc_id)
 
@@ -66,12 +71,6 @@ def index_pdf(doc_id, pdf_bytes):
             embeddings=embed([c["text"] for c in batch]),
             metadatas=[{"page": c["page"]} for c in batch],
         )
-    return "\n\n".join(f"[Page {num}]\n{text}" for num, text in pages)
-
-
-def summarize(full_text):
-    reply = generate(SUMMARY_PROMPT.format(text=full_text[:120_000]), as_json=True)
-    return json.loads(reply)
 
 
 def ask(doc_id, question):
@@ -86,4 +85,7 @@ def ask(doc_id, question):
 
     context = "\n\n".join(f"[Page {p}] {t}" for p, t in zip(pages, passages))
     answer = generate(ANSWER_PROMPT.format(context=context, question=question))
-    return {"answer": answer, "sources": sorted(set(pages))}
+
+    # only return the pages the answer actually cites
+    cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)}
+    return {"answer": answer, "sources": sorted(cited & set(pages))}

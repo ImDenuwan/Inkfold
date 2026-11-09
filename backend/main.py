@@ -26,13 +26,21 @@ def upload():
     if not file or not file.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Please upload a PDF file."}), 400
 
-    doc_id = uuid.uuid4().hex
     try:
-        text = rag.index_pdf(doc_id, file.read())
+        pages = rag.read_pdf(file.read())
     except ValueError as e:
         return jsonify({"error": str(e)}), 422
 
-    return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": rag.summarize(text)})
+    summary = rag.summarize(pages)
+    if not summary.get("is_research_paper", True):
+        return jsonify({
+            "error": "This doesn't look like a research paper.",
+            "document_type": summary.get("document_type") or "document",
+        }), 422
+
+    doc_id = uuid.uuid4().hex
+    rag.index_pdf(doc_id, pages)
+    return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": summary})
 
 
 @app.post("/ask")
@@ -52,6 +60,11 @@ def ask():
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({"error": "The file is larger than 25 MB."}), 413
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({"error": "Something went wrong on our side. Please try again."}), 500
 
 
 @app.errorhandler(errors.APIError)

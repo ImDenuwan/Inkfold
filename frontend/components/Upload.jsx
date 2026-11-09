@@ -41,7 +41,8 @@ export default function Upload({ onUploaded }) {
     setStep(0);
     setFile(selected);
     try {
-      onUploaded(await uploadPaper(selected, force));
+      const data = await uploadPaper(selected, force);
+      onUploaded({ ...data, file: selected });
     } catch (err) {
       if (err.notPaper) setRejected(selected);
       else setError(err.message);

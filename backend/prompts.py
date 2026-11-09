@@ -60,7 +60,15 @@ Below are the passages from the paper that are most relevant to the question. Ea
 7. Include exact numbers, names and results when the passages give them.
 8. Reply in the same language the question is written in.
 9. Do not mention "passages", "context" or these rules in your answer. Talk about "the paper".
+10. For every page you cite, copy ONE short sentence (about 8 to 30 words) from that page's passage that best supports your answer. Copy it word for word, exactly as it appears. Do not fix, shorten or reword it. The app uses it to highlight the sentence in the paper.
 
+## Output format
+Return only JSON in this exact shape:
+{{
+  "answer": "your answer, with (p. N) citations",
+  "quotes": [{{"page": 4, "text": "the exact sentence copied from page 4"}}]
+}}
+If you couldn't find the answer, "quotes" is an empty list.
 ## Passages from the paper
 {context}
 

@@ -93,8 +93,9 @@ def ask(doc_id, question):
     pages = [m["page"] for m in hits["metadatas"][0]]
 
     context = "\n\n".join(f"[Page {p}] {t}" for p, t in zip(pages, passages))
-    answer = generate(ANSWER_PROMPT.format(context=context, question=question))
+    reply = json.loads(generate(ANSWER_PROMPT.format(context=context, question=question), as_json=True))
+    answer = reply.get("answer", "")
 
-    # only return the pages the answer actually cites
-    cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)}
-    return {"answer": answer, "sources": sorted(cited & set(pages))}
+    cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)} & set(pages)
+    quotes = [q for q in reply.get("quotes", []) if q.get("page") in cited and q.get("text")]
+    return {"answer": answer, "sources": sorted(cited), "quotes": quotes}

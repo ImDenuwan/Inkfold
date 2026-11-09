@@ -1,17 +1,18 @@
-import { Inter } from "next/font/google";
+import { Inter, Inter_Tight } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-inter-tight" });
 
 export const metadata = {
   title: "Inkfold",
-  description: "Upload a research paper, get a structured summary, and ask questions.",
+  description: "Upload a research paper, get a structured summary, and ask questions with page citations.",
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>{children}</body>
+    <html lang="en" className={`${inter.variable} ${interTight.variable}`}>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   );
 }

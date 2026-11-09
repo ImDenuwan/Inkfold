@@ -1,7 +1,9 @@
 "use client";
-import { ImageGenerationLoader } from "./ui/ImageGenerationLoader";
+
 import { useEffect, useState } from "react";
 import { uploadPaper } from "../lib/api";
+import { loadHistory, removeHistory } from "../lib/history";
+import { ImageGenerationLoader } from "./ui/ImageGenerationLoader";
 
 const STEPS = [
   "Reading every page",
@@ -21,6 +23,19 @@ export default function Upload({ onUploaded }) {
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [rejected, setRejected] = useState(null);
+  const [recent, setRecent] = useState([]);
+
+  // papers this guest opened before
+  useEffect(() => {
+    loadHistory().then(setRecent);
+  }, []);
+
+  const asked = (p) => p.messages?.filter((m) => m.role === "user").length || 0;
+
+  function forget(docId) {
+    removeHistory(docId);
+    setRecent((list) => list.filter((p) => p.doc_id !== docId));
+  }
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
@@ -151,8 +166,9 @@ export default function Upload({ onUploaded }) {
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mt-10 block w-full max-w-xl animate-rise cursor-pointer rounded-3xl border-2 border-dashed bg-white px-6 py-12 transition hover:-translate-y-1 hover:shadow-lg ${dragging ? "border-accent bg-accent-soft" : "border-line"
-          }`}
+        className={`mt-10 block w-full max-w-xl animate-rise cursor-pointer rounded-3xl border-2 border-dashed bg-white px-6 py-12 transition hover:-translate-y-1 hover:shadow-lg ${
+          dragging ? "border-accent bg-accent-soft" : "border-line"
+        }`}
         style={{ animationDelay: "240ms" }}
       >
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper">
@@ -174,6 +190,29 @@ export default function Upload({ onUploaded }) {
 
       {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
 
+      {recent.length > 0 && (
+        <div className="mt-10 w-full max-w-xl animate-rise text-left">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-accent">Recent papers</h2>
+          <ul className="mt-3 overflow-hidden rounded-2xl border border-line bg-white">
+            {recent.slice(0, 5).map((p) => (
+              <li key={p.doc_id} className="flex items-center gap-3 border-b border-line last:border-0">
+                <button onClick={() => onUploaded(p)} className="min-w-0 flex-1 px-5 py-3.5 text-left transition hover:bg-paper">
+                  <span className="block truncate font-medium">{p.summary?.title || p.filename}</span>
+                  <span className="block text-sm text-muted">
+                    {asked(p)} {asked(p) === 1 ? "question" : "questions"} ·{" "}
+                    {new Date(p.updated_at).toLocaleDateString()}
+                  </span>
+                </button>
+                <button onClick={() => forget(p.doc_id)} aria-label="Remove from history" className="mr-3 rounded-lg px-2.5 py-1 text-muted transition hover:bg-paper hover:text-ink">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted">Saved in this browser. Nothing is shared or tracked.</p>
+        </div>
+      )}
+
       <div className="mt-16 grid w-full max-w-4xl gap-4 text-left sm:grid-cols-3">
         {FEATURES.map((f, i) => (
           <div
@@ -188,30 +227,30 @@ export default function Upload({ onUploaded }) {
       </div>
     </section>
   );
+}
 
-  // The progress list. "failed" puts a red cross on the current step.
-  function Steps({ current, failed = false }) {
-    return (
-      <ol className="mt-6 overflow-hidden rounded-2xl border border-line bg-white">
-        {STEPS.map((label, i) => (
-          <li key={label} className="flex items-center gap-3 border-b border-line px-5 py-4 last:border-0">
-            {i < current ? (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs text-white">✓</span>
-            ) : i === current && failed ? (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs text-white">✗</span>
-            ) : i === current ? (
-              <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-accent">
-                <span className="h-2 w-2 animate-blink rounded-full bg-accent" />
-              </span>
-            ) : (
-              <span className="h-6 w-6 rounded-full border border-line" />
-            )}
-            <span className={i > current ? "text-muted" : i === current && failed ? "font-medium text-red-700" : "font-medium"}>
-              {label}
+// The progress list. "failed" puts a red cross on the current step.
+function Steps({ current, failed = false }) {
+  return (
+    <ol className="mt-6 overflow-hidden rounded-2xl border border-line bg-white">
+      {STEPS.map((label, i) => (
+        <li key={label} className="flex items-center gap-3 border-b border-line px-5 py-4 last:border-0">
+          {i < current ? (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs text-white">✓</span>
+          ) : i === current && failed ? (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs text-white">✗</span>
+          ) : i === current ? (
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-accent">
+              <span className="h-2 w-2 animate-blink rounded-full bg-accent" />
             </span>
-          </li>
-        ))}
-      </ol>
-    );
-  }
+          ) : (
+            <span className="h-6 w-6 rounded-full border border-line" />
+          )}
+          <span className={i > current ? "text-muted" : i === current && failed ? "font-medium text-red-700" : "font-medium"}>
+            {label}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
 }

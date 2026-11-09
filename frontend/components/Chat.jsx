@@ -29,8 +29,8 @@ function Answer({ text, onCite }) {
   );
 }
 
-export default function Chat({ docId, suggestions, onCite }) {
-  const [messages, setMessages] = useState([]);
+export default function Chat({ docId, suggestions, onCite, initialMessages = [], onChange }) {
+  const [messages, setMessages] = useState(initialMessages);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
@@ -38,6 +38,10 @@ export default function Chat({ docId, suggestions, onCite }) {
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (messages.length) onChange?.(messages.filter((m) => m.role !== "error"));
+  }, [messages]);
 
   async function ask(text) {
     text = text.trim();

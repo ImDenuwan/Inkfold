@@ -6,12 +6,21 @@ import Upload from "../components/Upload";
 import Summary from "../components/Summary";
 import Chat from "../components/Chat";
 import PdfViewer from "../components/PdfViewer";
+import Quiz from "../components/Quiz";
+import { API_URL } from "../lib/api";
+import { saveHistory } from "../lib/history";
 
 export default function Home() {
   const [paper, setPaper] = useState(null);
   const [view, setView] = useState("summary");
-  // which page the preview shows, and the sentences to highlight
   const [cite, setCite] = useState({ page: 1, quotes: [] });
+
+  function open(next) {
+    setPaper(next);
+    setView("summary");
+    setCite({ page: 1, quotes: [] });
+    if (next.file) saveHistory(next);
+  }
 
   function reset() {
     setPaper(null);
@@ -47,7 +56,7 @@ export default function Home() {
             <div className="mb-5 flex items-center justify-between gap-4">
               <p className="truncate text-sm text-muted">{paper.filename}</p>
               <div className="flex shrink-0 rounded-xl border border-line bg-white p-1 text-sm">
-                {["summary", "paper"].map((v) => (
+                {["summary", "paper", "quiz"].map((v) => (
                   <button
                     key={v}
                     onClick={() => setView(v)}
@@ -60,19 +69,32 @@ export default function Home() {
               </div>
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-              {view === "summary" ? <Summary summary={paper.summary} /> : (
+              {view === "summary" && <Summary summary={paper.summary} />}
+              {view === "paper" && (
                 <PdfViewer
                   file={paper.file}
+                  url={`${API_URL}/pdf/${paper.doc_id}`}
                   page={cite.page}
                   quotes={cite.quotes}
                   onPage={(page) => setCite((c) => ({ ...c, page }))}
                 />
               )}
-              <Chat docId={paper.doc_id} suggestions={paper.summary.suggested_questions || []} onCite={openPage} />
+              {/* hidden, not removed, so answers stay when switching tabs */}
+              <div className={view === "quiz" ? "" : "hidden"}>
+                <Quiz key={paper.doc_id} docId={paper.doc_id} onCite={openPage} />
+              </div>
+              <Chat
+                key={paper.doc_id}
+                docId={paper.doc_id}
+                suggestions={paper.summary.suggested_questions || []}
+                onCite={openPage}
+                initialMessages={paper.messages}
+                onChange={(messages) => saveHistory({ ...paper, messages })}
+              />
             </div>
           </>
         ) : (
-          <Upload onUploaded={setPaper} />
+          <Upload onUploaded={open} />
         )}
       </main>
 

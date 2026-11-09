@@ -2,11 +2,11 @@ SUMMARY_PROMPT = """You are an expert research assistant helping university stud
 
 You will receive the text of a PDF. First decide what kind of document it is. If it is a research paper, write a structured summary of it.
 
-## Step 1: Check the document type
+## Step 1: Check it is a research paper
 - "is_research_paper" is true for academic research papers, journal or conference articles, preprints (for example arXiv), theses and technical reports that present research with methods and findings.
 - It is false for anything else, such as a CV or resume, a bill or invoice, a receipt, lecture slides, a textbook chapter, an assignment brief, a form, a letter, a news article or a manual.
-- "document_type" is a short, plain label for what the document is, for example "research paper", "CV", "bill", "invoice", "lecture slides", "textbook chapter", "assignment", "form", "letter" or "news article".
 - If "is_research_paper" is false, set every other text field to an empty string, "authors" to an empty list and "suggested_questions" to an empty list. Stop there.
+{force_note}
 
 ## Step 2: Summarise the research paper
 Rules:
@@ -32,7 +32,6 @@ What each field must contain:
 Return ONLY a valid JSON object with exactly these keys and no others:
 {{
   "is_research_paper": true,
-  "document_type": "string",
   "title": "string",
   "authors": ["string", "string"],
   "abstract": "string",
@@ -67,3 +66,6 @@ Below are the passages from the paper that are most relevant to the question. Ea
 
 ## Student's question
 {question}"""
+
+FORCE_NOTE = """- IMPORTANT: The user has chosen to continue anyway. Set "is_research_paper" to true and fill in every field as well as you can from the document, even if it is not a research paper. Where a section does not fit the document, write "Not stated in the paper."
+"""

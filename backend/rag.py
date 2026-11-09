@@ -6,7 +6,7 @@ import chromadb
 import pymupdf
 from google import genai
 
-from prompts import ANSWER_PROMPT, SUMMARY_PROMPT
+from prompts import ANSWER_PROMPT, FORCE_NOTE, SUMMARY_PROMPT
 
 if not os.getenv("GEMINI_API_KEY"):
     raise RuntimeError("Add GEMINI_API_KEY to backend/.env")
@@ -43,6 +43,14 @@ def read_pdf(pdf_bytes):
         raise ValueError("No text found. It may be a scanned PDF.")
     return pages
 
+PAPER_SIGNS = ["abstract", "introduction", "references", "bibliography", "related work",
+               "methodology", "experiment", "conclusion", "doi", "arxiv", "et al"]
+
+
+def looks_like_paper(pages):
+    """Free check before calling Gemini: real papers use most of these words."""
+    text = " ".join(t for _, t in pages).lower()
+    return sum(sign in text for sign in PAPER_SIGNS) >= 3
 
 def chunk(pages):
     chunks = []
@@ -53,9 +61,10 @@ def chunk(pages):
     return chunks
 
 
-def summarize(pages):
+def summarize(pages, force=False):
     text = "\n\n".join(f"[Page {num}]\n{t}" for num, t in pages)
-    return json.loads(generate(SUMMARY_PROMPT.format(text=text[:120_000]), as_json=True))
+    prompt = SUMMARY_PROMPT.format(text=text[:120_000], force_note=FORCE_NOTE if force else "")
+    return json.loads(generate(prompt, as_json=True))
 
 
 def index_pdf(doc_id, pages):

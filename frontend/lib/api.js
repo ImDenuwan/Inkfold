@@ -4,15 +4,15 @@ async function handle(response) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(data.error || "Something went wrong. Please try again.");
-    error.documentType = data.document_type;
+    error.notPaper = data.not_paper;
     throw error;
   }
   return data;
 }
-
-export async function uploadPaper(file) {
+export async function uploadPaper(file, force = false) {
   const form = new FormData();
   form.append("file", file);
+  if (force) form.append("force", "true");
   const response = await fetch(`${API_URL}/upload`, { method: "POST", body: form });
   return handle(response);
 }

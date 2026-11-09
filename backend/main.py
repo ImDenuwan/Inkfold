@@ -31,18 +31,23 @@ def upload():
     except ValueError as e:
         return jsonify({"error": str(e)}), 422
 
-    summary = rag.summarize(pages)
-    if not summary.get("is_research_paper", True):
-        return jsonify({
-            "error": "This doesn't look like a research paper.",
-            "document_type": summary.get("document_type") or "document",
-        }), 422
+    force = request.form.get("force") == "true"
+
+    # free keyword check first, so a CV or bill never reaches Gemini
+    if not force and not rag.looks_like_paper(pages):
+        return not_paper()
+
+    summary = rag.summarize(pages, force)
+    if not force and not summary.get("is_research_paper", True):
+        return not_paper()
 
     doc_id = uuid.uuid4().hex
     rag.index_pdf(doc_id, pages)
     return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": summary})
 
-
+def not_paper():
+    return jsonify({"error": "This doesn't look like a research paper.", "not_paper": True}), 422
+    
 @app.post("/ask")
 def ask():
     data = request.get_json(silent=True) or {}

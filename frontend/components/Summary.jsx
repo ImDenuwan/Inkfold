@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apa, bibtex } from "../lib/cite";
 
 const SECTIONS = [
   { key: "problem_statement", label: "Problem Statement" },
@@ -57,6 +58,45 @@ export default function Summary({ summary }) {
           </div>
         </div>
       ))}
+
+      <Cite summary={summary} />
     </section>
+  );
+}
+
+// APA and BibTeX for the paper, with a copy button
+function Cite({ summary }) {
+  const [style, setStyle] = useState("APA");
+  const [copied, setCopied] = useState(false);
+  if (!summary.title) return null;
+  const text = style === "APA" ? apa(summary) : bibtex(summary);
+
+  function copy() {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl bg-paper p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-semibold">Cite this paper</h3>
+        <div className="flex items-center gap-1 text-sm">
+          {["APA", "BibTeX"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStyle(s)}
+              className={`rounded-lg px-3 py-1 transition ${style === s ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
+            >
+              {s}
+            </button>
+          ))}
+          <button onClick={copy} className="ml-1 rounded-lg border border-line bg-white px-3 py-1 transition hover:border-ink">
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      </div>
+      <pre className="mt-3 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-muted">{text}</pre>
+    </div>
   );
 }

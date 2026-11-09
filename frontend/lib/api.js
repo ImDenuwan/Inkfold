@@ -1,9 +1,11 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function handle(response) {
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || "Something went wrong. Please try again.");
+    const error = new Error(data.error || "Something went wrong. Please try again.");
+    error.documentType = data.document_type;
+    throw error;
   }
   return data;
 }

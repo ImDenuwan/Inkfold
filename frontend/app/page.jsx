@@ -19,10 +19,10 @@ export default function Home() {
     setCite({ page: 1, quotes: [] });
   }
 
-  // clicking a citation like "p. 4" opens the paper at that page
   function openPage(page, quotes = []) {
     setCite({ page, quotes });
     setView("paper");
+    if (window.innerWidth < 1024) setTimeout(() => document.getElementById("viewer")?.scrollIntoView({ behavior: "smooth" }), 50);
   }
 
   return (

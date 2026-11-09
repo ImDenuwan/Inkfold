@@ -34,22 +34,34 @@ function findMarks(items, quotes, viewport) {
     });
 }
 
+const btn = "h-8 min-w-8 rounded-lg border border-line px-2 transition hover:border-ink disabled:opacity-30";
+
 export default function PdfViewer({ file, page, quotes, onPage }) {
     const [pdf, setPdf] = useState(null);
+    const [zoom, setZoom] = useState(1);
     const [marks, setMarks] = useState([]);
-    const boxRef = useRef(null);
+    const scrollRef = useRef(null);
     const canvasRef = useRef(null);
 
-    // load the PDF once (pdf.js only runs in the browser)
+    // load the PDF (pdf.js only runs in the browser)
     useEffect(() => {
-        let doc;
+        let cancelled = false;
+        let task;
         (async () => {
             const pdfjs = await import("pdfjs-dist");
             pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-            doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
-            setPdf(doc);
-        })();
-        return () => doc?.destroy();
+            const data = await file.arrayBuffer();
+            if (cancelled) return;
+            task = pdfjs.getDocument({ data });
+            const doc = await task.promise;
+            if (!cancelled) setPdf(doc);
+        })().catch(() => { });
+
+        // stop loading if the viewer closes early
+        return () => {
+            cancelled = true;
+            task?.destroy().catch(() => { });
+        };
     }, [file]);
 
     // draw the page, then find the quotes on it
@@ -58,14 +70,16 @@ export default function PdfViewer({ file, page, quotes, onPage }) {
         let task;
         (async () => {
             const p = await pdf.getPage(page);
-            const scale = boxRef.current.clientWidth / p.getViewport({ scale: 1 }).width;
-            const viewport = p.getViewport({ scale });
+            // zoom 1 = page fits the box width
+            const fit = (scrollRef.current.clientWidth - 32) / p.getViewport({ scale: 1 }).width;
+            const viewport = p.getViewport({ scale: fit * zoom });
             const ratio = window.devicePixelRatio || 1;
 
             // draw at screen sharpness (retina phones need 2x pixels)
             const canvas = canvasRef.current;
             canvas.width = viewport.width * ratio;
             canvas.height = viewport.height * ratio;
+            canvas.style.width = `${viewport.width}px`;
             canvas.style.height = `${viewport.height}px`;
             task = p.render({ canvas, viewport, transform: [ratio, 0, 0, ratio, 0, 0] });
             await task.promise;
@@ -75,53 +89,50 @@ export default function PdfViewer({ file, page, quotes, onPage }) {
             setMarks(findMarks(items, pageQuotes, viewport));
         })().catch(() => { });
         return () => task?.cancel();
-    }, [pdf, page, quotes]);
+    }, [pdf, page, zoom, quotes]);
 
-    // after the page is drawn, scroll to the highlight (or the top of the page)
+    // new page: scroll inside the box to the highlight, or to the top
     useEffect(() => {
-        const target = boxRef.current?.querySelector("[data-mark]") || boxRef.current;
-        target?.scrollIntoView({ behavior: "smooth", block: marks.length ? "center" : "start" });
+        scrollRef.current?.scrollTo({ top: 0 });
+    }, [page]);
+    useEffect(() => {
+        if (marks.length) scrollRef.current?.scrollTo({ top: marks[0].top - 80, behavior: "smooth" });
     }, [marks]);
 
     const total = pdf?.numPages || 1;
 
     return (
-        <section className="animate-rise overflow-hidden rounded-3xl border border-line bg-white">
-            <div className="flex items-center justify-between gap-4 border-b border-line px-5 py-3 text-sm">
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => onPage(page - 1)}
-                        disabled={page <= 1}
-                        aria-label="Previous page"
-                        className="h-8 w-8 rounded-lg border border-line transition hover:border-ink disabled:opacity-30"
-                    >
-                        ‹
-                    </button>
-                    <span className="tabular-nums text-muted">
-                        Page {page} of {total}
-                    </span>
-                    <button
-                        onClick={() => onPage(page + 1)}
-                        disabled={page >= total}
-                        aria-label="Next page"
-                        className="h-8 w-8 rounded-lg border border-line transition hover:border-ink disabled:opacity-30"
-                    >
-                        ›
-                    </button>
+        <section
+            id="viewer"
+            className="flex h-[75vh] animate-rise scroll-mt-4 flex-col overflow-hidden rounded-3xl border border-line bg-white lg:sticky lg:top-6 lg:h-[calc(100vh-10rem)]"
+        >
+            <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5 text-sm sm:px-5">
+                <div className="flex items-center gap-1.5">
+                    <button onClick={() => onPage(page - 1)} disabled={page <= 1} aria-label="Previous page" className={btn}>‹</button>
+                    <span className="px-1 tabular-nums text-muted">{page} / {total}</span>
+                    <button onClick={() => onPage(page + 1)} disabled={page >= total} aria-label="Next page" className={btn}>›</button>
                 </div>
-                {marks.length > 0 && <span className="rounded bg-cite px-2 py-0.5 text-xs font-medium text-cite-ink">Highlighted</span>}
+                <div className="flex items-center gap-1.5">
+                    <button onClick={() => setZoom((z) => z - 0.25)} disabled={zoom <= 0.5} aria-label="Zoom out" className={btn}>−</button>
+                    <button onClick={() => setZoom(1)} className="w-14 tabular-nums text-muted hover:text-ink" title="Fit to width">
+                        {Math.round(zoom * 100)}%
+                    </button>
+                    <button onClick={() => setZoom((z) => z + 0.25)} disabled={zoom >= 3} aria-label="Zoom in" className={btn}>+</button>
+                </div>
             </div>
 
-            <div ref={boxRef} className="relative scroll-mt-6">
-                <canvas ref={canvasRef} className="block w-full" />
-                {marks.map((m, i) => (
-                    <span
-                        key={i}
-                        data-mark
-                        className="absolute rounded-sm bg-yellow-300/50 mix-blend-multiply"
-                        style={{ left: m.left, top: m.top, width: m.width, height: m.height }}
-                    />
-                ))}
+            {/* the page scrolls inside this box, so the toolbar never moves */}
+            <div ref={scrollRef} className="flex-1 overflow-auto bg-paper p-4">
+                <div className="relative mx-auto w-fit shadow-sm">
+                    <canvas ref={canvasRef} className="block bg-white" />
+                    {marks.map((m, i) => (
+                        <span
+                            key={i}
+                            className="absolute rounded-sm bg-yellow-300/50 mix-blend-multiply"
+                            style={{ left: m.left, top: m.top, width: m.width, height: m.height }}
+                        />
+                    ))}
+                </div>
             </div>
         </section>
     );

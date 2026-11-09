@@ -1,11 +1,11 @@
 "use client";
-
+import { ImageGenerationLoader } from "./ui/ImageGenerationLoader";
 import { useEffect, useState } from "react";
 import { uploadPaper } from "../lib/api";
 
 const STEPS = [
-  "Checking it's a research paper",
   "Reading every page",
+  "Checking it's a research paper",
   "Writing the five-part summary",
   "Preparing it for your questions",
 ];
@@ -20,29 +20,30 @@ export default function Upload({ onUploaded }) {
   const [file, setFile] = useState(null);
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
-  const [notPaper, setNotPaper] = useState("");
+  const [rejected, setRejected] = useState(null);
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
     if (!file) return;
-    const timer = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 4000);
-    return () => clearInterval(timer);
+    // move the steps along while we wait for the server
+    const timers = [1500, 4000, 15000].map((ms, i) => setTimeout(() => setStep(i + 1), ms));
+    return () => timers.forEach(clearTimeout);
   }, [file]);
 
-  async function send(selected) {
+  async function send(selected, force = false) {
     if (!selected) return;
     if (!selected.name.toLowerCase().endsWith(".pdf")) {
       setError("Please choose a PDF file.");
       return;
     }
     setError("");
-    setNotPaper("");
+    setRejected(null);
     setStep(0);
     setFile(selected);
     try {
-      onUploaded(await uploadPaper(selected));
+      onUploaded(await uploadPaper(selected, force));
     } catch (err) {
-      if (err.documentType) setNotPaper(err.documentType);
+      if (err.notPaper) setRejected(selected);
       else setError(err.message);
     } finally {
       setFile(null);
@@ -58,8 +59,26 @@ export default function Upload({ onUploaded }) {
   if (file) {
     return (
       <section className="mx-auto max-w-xl animate-rise py-10">
-        <p className="truncate text-sm text-muted">{file.name}</p>
-        <h2 className="mt-2 font-display text-4xl font-bold tracking-tight sm:text-5xl">Reading your paper</h2>
+        <div className="relative mx-auto mb-10 aspect-[3/4] w-56 overflow-hidden rounded-2xl border border-line bg-white p-6 shadow-sm">
+          <div className="h-3 w-3/4 rounded bg-line" />
+          <div className="mt-2 h-2 w-1/2 rounded bg-line" />
+          <div className="mt-6 space-y-2">
+            {[100, 92, 96, 88, 94, 70, 98, 90, 84, 60].map((w, i) => (
+              <div key={i} className="h-1.5 rounded bg-paper" style={{ width: `${w}%` }} />
+            ))}
+          </div>
+          <p className="absolute right-0 bottom-3 left-0 truncate px-4 text-center text-xs text-muted">{file.name}</p>
+          <ImageGenerationLoader
+            effect="scale-wave"
+            text="Reading"
+            cellSize={3}
+            gap={1}
+            bandHeight={48}
+            colors={["#F26A1B", "#B8430C"]}
+          />
+        </div>
+
+        <h2 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">Reading your paper</h2>
         <p className="mt-3 text-muted">Usually under a minute.</p>
 
         <div className="mt-8 h-1.5 overflow-hidden rounded-full bg-line">
@@ -69,42 +88,35 @@ export default function Upload({ onUploaded }) {
           />
         </div>
 
-        <ol className="mt-6 overflow-hidden rounded-2xl border border-line bg-white">
-          {STEPS.map((label, i) => (
-            <li key={label} className="flex items-center gap-3 border-b border-line px-5 py-4 last:border-0">
-              {i < step ? (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs text-white">✓</span>
-              ) : i === step ? (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-accent">
-                  <span className="h-2 w-2 animate-blink rounded-full bg-accent" />
-                </span>
-              ) : (
-                <span className="h-6 w-6 rounded-full border border-line" />
-              )}
-              <span className={i > step ? "text-muted" : "font-medium"}>{label}</span>
-            </li>
-          ))}
-        </ol>
+        <Steps current={step} />
       </section>
     );
   }
 
-  if (notPaper) {
+  if (rejected) {
     return (
-      <section className="mx-auto max-w-lg animate-rise rounded-3xl border border-line bg-white px-6 py-12 text-center sm:px-10">
-        <span className="inline-block rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-white">
-          Detected: {notPaper}
-        </span>
-        <h2 className="mt-5 font-display text-3xl font-bold tracking-tight">This doesn't look like a research paper</h2>
+      <section className="mx-auto max-w-xl animate-rise py-10">
+        <h2 className="font-display text-4xl font-bold tracking-tight">This doesn't look like a research paper</h2>
         <p className="mt-3 text-muted">
-          Inkfold works best with academic papers that have an abstract, methods and results.
+          Inkfold works best with academic papers that have an abstract, methods and results. If we got it wrong, you can continue anyway.
         </p>
-        <button
-          onClick={() => setNotPaper("")}
-          className="mt-8 rounded-xl bg-ink px-6 py-3 font-medium text-white transition hover:bg-black"
-        >
-          Upload a different file
-        </button>
+
+        <Steps current={1} failed />
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <button
+            onClick={() => setRejected(null)}
+            className="rounded-xl bg-ink px-6 py-3 font-medium text-white transition hover:bg-black"
+          >
+            Upload a different file
+          </button>
+          <button
+            onClick={() => send(rejected, true)}
+            className="rounded-xl border border-line bg-white px-6 py-3 font-medium transition hover:border-ink"
+          >
+            Continue anyway
+          </button>
+        </div>
       </section>
     );
   }
@@ -138,9 +150,8 @@ export default function Upload({ onUploaded }) {
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mt-10 block w-full max-w-xl animate-rise cursor-pointer rounded-3xl border-2 border-dashed bg-white px-6 py-12 transition hover:-translate-y-1 hover:shadow-lg ${
-          dragging ? "border-accent bg-accent-soft" : "border-line"
-        }`}
+        className={`mt-10 block w-full max-w-xl animate-rise cursor-pointer rounded-3xl border-2 border-dashed bg-white px-6 py-12 transition hover:-translate-y-1 hover:shadow-lg ${dragging ? "border-accent bg-accent-soft" : "border-line"
+          }`}
         style={{ animationDelay: "240ms" }}
       >
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper">
@@ -176,4 +187,30 @@ export default function Upload({ onUploaded }) {
       </div>
     </section>
   );
+
+  // The progress list. "failed" puts a red cross on the current step.
+  function Steps({ current, failed = false }) {
+    return (
+      <ol className="mt-6 overflow-hidden rounded-2xl border border-line bg-white">
+        {STEPS.map((label, i) => (
+          <li key={label} className="flex items-center gap-3 border-b border-line px-5 py-4 last:border-0">
+            {i < current ? (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-xs text-white">✓</span>
+            ) : i === current && failed ? (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs text-white">✗</span>
+            ) : i === current ? (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-accent">
+                <span className="h-2 w-2 animate-blink rounded-full bg-accent" />
+              </span>
+            ) : (
+              <span className="h-6 w-6 rounded-full border border-line" />
+            )}
+            <span className={i > current ? "text-muted" : i === current && failed ? "font-medium text-red-700" : "font-medium"}>
+              {label}
+            </span>
+          </li>
+        ))}
+      </ol>
+    );
+  }
 }

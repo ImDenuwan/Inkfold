@@ -63,7 +63,9 @@ The prompts are in [`backend/prompts.py`](backend/prompts.py).
 
 ## 🚀 Getting started
 
-You need **Python 3.10 to 3.12**, **Node.js 20+** and a free **Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey).
+You need **Python 3.10 to 3.14**, **Node.js 20+** and a free **Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey).
+
+> Tested on Python 3.14. Python 3.15 doesn't work yet, because some of ChromaDB's dependencies haven't released versions for it.
 
 ```bash
 git clone https://github.com/ImDenuwan/Inkfold.git

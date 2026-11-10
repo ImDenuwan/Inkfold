@@ -8,6 +8,7 @@ import ThemeToggle from "../components/ThemeToggle";
 import { AccountButton } from "../components/Account";
 import StorageNotice from "../components/StorageNotice";
 import { saveHistory } from "../lib/history";
+import Footer from "../components/Footer";
 
 export default function Home() {
   const [paper, setPaper] = useState(null);
@@ -29,7 +30,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div id="top" className="flex min-h-screen flex-col">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-8">
         <Logo />
         <nav className="flex items-center gap-1 text-sm sm:gap-2">
@@ -44,15 +45,7 @@ export default function Home() {
         <Upload onUploaded={open} />
       </main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-muted sm:px-8">
-          <span>Inkfold. No ads, no tracking.</span>
-          <nav aria-label="Legal" className="flex gap-4">
-            <a href="/privacy" className="hover:text-ink">Privacy</a>
-            <a href="/privacy#terms" className="hover:text-ink">Terms</a>
-          </nav>
-        </div>
-      </footer>
+      <Footer />
 
       <StorageNotice />
     </div>

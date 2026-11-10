@@ -106,11 +106,11 @@ MIT. See [LICENSE](LICENSE).
 - The reading animation is adapted from [Aceternity UI](https://ui.aceternity.com).
 - README layout inspired by [Best-README-Template](https://github.com/othneildrew/Best-README-Template).
 
-[stars-shield]: https://img.shields.io/github/stars/ImDenuwan/Inkfold.svg?style=for-the-badge
+[stars-shield]: https://img.shields.io/github/stars/ImDenuwan/Inkfold.svg?style=for-the-badge&v=2
 [stars-url]: https://github.com/ImDenuwan/Inkfold/stargazers
-[forks-shield]: https://img.shields.io/github/forks/ImDenuwan/Inkfold.svg?style=for-the-badge
+[forks-shield]: https://img.shields.io/github/forks/ImDenuwan/Inkfold.svg?style=for-the-badge&v=2
 [forks-url]: https://github.com/ImDenuwan/Inkfold/network/members
-[issues-shield]: https://img.shields.io/github/issues/ImDenuwan/Inkfold.svg?style=for-the-badge
+[issues-shield]: https://img.shields.io/github/issues/ImDenuwan/Inkfold.svg?style=for-the-badge&v=2
 [issues-url]: https://github.com/ImDenuwan/Inkfold/issues
-[license-shield]: https://img.shields.io/github/license/ImDenuwan/Inkfold.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/ImDenuwan/Inkfold.svg?style=for-the-badge&v=2
 [license-url]: https://github.com/ImDenuwan/Inkfold/blob/main/LICENSE

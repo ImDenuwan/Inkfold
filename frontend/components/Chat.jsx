@@ -3,25 +3,34 @@
 import { useEffect, useRef, useState } from "react";
 import { askQuestion } from "../lib/api";
 
-function Answer({ text }) {
+// One small button per page number. Clicking opens the paper at that page.
+function PageLink({ page, onCite }) {
+  return (
+    <button
+      onClick={() => onCite(page)}
+      className="mx-0.5 rounded bg-cite px-1.5 py-0.5 text-xs font-medium text-cite-ink transition hover:brightness-95"
+    >
+      p. {page}
+    </button>
+  );
+}
+
+// Turns "(p. 4, p. 6)" in the answer into page buttons
+function Answer({ text, onCite }) {
   const parts = text.split(/(\(p\.\s*\d+(?:,\s*p\.\s*\d+)*\))/g);
   return (
     <p className="whitespace-pre-wrap leading-relaxed">
       {parts.map((part, i) =>
-        /^\(p\./.test(part) ? (
-          <mark key={i} className="rounded bg-cite px-1.5 py-0.5 text-xs font-medium text-cite-ink">
-            {part.slice(1, -1)}
-          </mark>
-        ) : (
-          part
-        )
+        /^\(p\./.test(part)
+          ? part.match(/\d+/g).map((n) => <PageLink key={`${i}-${n}`} page={Number(n)} onCite={onCite} />)
+          : part
       )}
     </p>
   );
 }
 
-export default function Chat({ docId, suggestions }) {
-  const [messages, setMessages] = useState([]);
+export default function Chat({ docId, suggestions, onCite, initialMessages = [], onChange }) {
+  const [messages, setMessages] = useState(initialMessages);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
@@ -29,6 +38,10 @@ export default function Chat({ docId, suggestions }) {
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (messages.length) onChange?.(messages.filter((m) => m.role !== "error"));
+  }, [messages]);
 
   async function ask(text) {
     text = text.trim();
@@ -39,7 +52,7 @@ export default function Chat({ docId, suggestions }) {
     setLoading(true);
     try {
       const reply = await askQuestion(docId, text);
-      setMessages((prev) => [...prev, { role: "assistant", text: reply.answer, sources: reply.sources }]);
+      setMessages((prev) => [...prev, { role: "assistant", text: reply.answer, sources: reply.sources, quotes: reply.quotes }]);
     } catch (err) {
       setMessages((prev) => [...prev, { role: "error", text: err.message }]);
     } finally {
@@ -83,9 +96,11 @@ export default function Chat({ docId, suggestions }) {
             <p key={i} className="animate-rise text-sm text-red-700">{msg.text}</p>
           ) : (
             <div key={i} className="animate-rise rounded-2xl border border-line bg-paper p-4">
-              <Answer text={msg.text} />
+              <Answer text={msg.text} onCite={(page) => onCite(page, msg.quotes)} />
               {msg.sources?.length > 0 && (
-                <p className="mt-3 text-xs text-muted">Sources: pages {msg.sources.join(", ")}</p>
+                <p className="mt-3 text-xs text-muted">
+                  Sources: {msg.sources.map((n) => <PageLink key={n} page={n} onCite={(page) => onCite(page, msg.quotes)} />)}
+                </p>
               )}
             </div>
           )

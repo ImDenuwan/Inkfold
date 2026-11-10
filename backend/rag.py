@@ -6,7 +6,7 @@ import chromadb
 import pymupdf
 from google import genai
 
-from prompts import ANSWER_PROMPT, FORCE_NOTE, SUMMARY_PROMPT
+from prompts import ANSWER_PROMPT, FORCE_NOTE, QUIZ_PROMPT, SUMMARY_PROMPT
 
 if not os.getenv("GEMINI_API_KEY"):
     raise RuntimeError("Add GEMINI_API_KEY to backend/.env")
@@ -43,6 +43,7 @@ def read_pdf(pdf_bytes):
         raise ValueError("No text found. It may be a scanned PDF.")
     return pages
 
+
 PAPER_SIGNS = ["abstract", "introduction", "references", "bibliography", "related work",
                "methodology", "experiment", "conclusion", "doi", "arxiv", "et al"]
 
@@ -51,6 +52,7 @@ def looks_like_paper(pages):
     """Free check before calling Gemini: real papers use most of these words."""
     text = " ".join(t for _, t in pages).lower()
     return sum(sign in text for sign in PAPER_SIGNS) >= 3
+
 
 def chunk(pages):
     chunks = []
@@ -82,19 +84,37 @@ def index_pdf(doc_id, pages):
         )
 
 
-def ask(doc_id, question):
+def get_collection(doc_id):
     try:
-        collection = db.get_collection(doc_id)
+        return db.get_collection(doc_id)
     except Exception:
         raise LookupError("Paper not found")
+
+
+def quiz(doc_id):
+    # rebuild the paper text from the stored passages, in order
+    stored = get_collection(doc_id).get(include=["documents", "metadatas"])
+    rows = sorted(zip(stored["ids"], stored["documents"], stored["metadatas"]), key=lambda r: int(r[0].rsplit("-", 1)[1]))
+    text = "\n\n".join(f"[Page {m['page']}] {t}" for _, t, m in rows)
+
+    questions = json.loads(generate(QUIZ_PROMPT.format(text=text[:100_000]), as_json=True)).get("questions", [])
+    # keep only well-formed questions
+    return [q for q in questions if len(q.get("options", [])) == 4 and q.get("answer") in range(4)]
+
+
+def ask(doc_id, question):
+    collection = get_collection(doc_id)
 
     hits = collection.query(query_embeddings=embed([question]), n_results=min(TOP_K, collection.count()))
     passages = hits["documents"][0]
     pages = [m["page"] for m in hits["metadatas"][0]]
 
     context = "\n\n".join(f"[Page {p}] {t}" for p, t in zip(pages, passages))
-    answer = generate(ANSWER_PROMPT.format(context=context, question=question))
+    reply = json.loads(generate(ANSWER_PROMPT.format(context=context, question=question), as_json=True))
+    answer = reply.get("answer", "")
 
     # only return the pages the answer actually cites
-    cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)}
-    return {"answer": answer, "sources": sorted(cited & set(pages))}
+    cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)} & set(pages)
+    # the sentences to highlight in the preview, for cited pages only
+    quotes = [q for q in reply.get("quotes", []) if q.get("page") in cited and q.get("text")]
+    return {"answer": answer, "sources": sorted(cited), "quotes": quotes}

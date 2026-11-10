@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 async function handle(response) {
   const data = await response.json().catch(() => ({}));
@@ -9,6 +9,7 @@ async function handle(response) {
   }
   return data;
 }
+
 export async function uploadPaper(file, force = false) {
   const form = new FormData();
   form.append("file", file);
@@ -22,6 +23,15 @@ export async function askQuestion(docId, question) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ doc_id: docId, question }),
+  });
+  return handle(response);
+}
+
+export async function makeQuiz(docId) {
+  const response = await fetch(`${API_URL}/quiz`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ doc_id: docId }),
   });
   return handle(response);
 }

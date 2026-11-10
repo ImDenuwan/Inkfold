@@ -1,18 +1,24 @@
+import os
+import re
 import uuid
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from google.genai import errors
 
+import history
 import rag
+
+UPLOADS = "uploads"
+os.makedirs(UPLOADS, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
-CORS(app, origins=["http://localhost:3000"])
+CORS(app, origins=["http://localhost:3000"], methods=["GET", "POST", "PUT", "DELETE"])
 
 
 @app.get("/")
@@ -26,11 +32,13 @@ def upload():
     if not file or not file.filename.lower().endswith(".pdf"):
         return jsonify({"error": "Please upload a PDF file."}), 400
 
+    pdf_bytes = file.read()
     try:
-        pages = rag.read_pdf(file.read())
+        pages = rag.read_pdf(pdf_bytes)
     except ValueError as e:
         return jsonify({"error": str(e)}), 422
 
+    # "Continue anyway" sends force=true and skips both checks
     force = request.form.get("force") == "true"
 
     # free keyword check first, so a CV or bill never reaches Gemini
@@ -43,11 +51,17 @@ def upload():
 
     doc_id = uuid.uuid4().hex
     rag.index_pdf(doc_id, pages)
+
+    # keep the PDF so the paper can be reopened from history
+    with open(os.path.join(UPLOADS, f"{doc_id}.pdf"), "wb") as f:
+        f.write(pdf_bytes)
     return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": summary})
+
 
 def not_paper():
     return jsonify({"error": "This doesn't look like a research paper.", "not_paper": True}), 422
-    
+
+
 @app.post("/ask")
 def ask():
     data = request.get_json(silent=True) or {}
@@ -58,6 +72,48 @@ def ask():
 
     try:
         return jsonify(rag.ask(doc_id, question))
+    except LookupError:
+        return jsonify({"error": "Paper not found. Please upload it again."}), 404
+
+
+def valid_id(doc_id):
+    return re.fullmatch(r"[0-9a-f]{32}", doc_id or "") is not None
+
+
+@app.get("/pdf/<doc_id>")
+def pdf(doc_id):
+    if not valid_id(doc_id):
+        return jsonify({"error": "Paper not found."}), 404
+    return send_from_directory(UPLOADS, f"{doc_id}.pdf", mimetype="application/pdf")
+
+
+@app.get("/history")
+def list_history():
+    if not history.enabled:
+        return jsonify({"enabled": False})
+    return jsonify({"enabled": True, "papers": history.list_papers(request.args.get("guest", ""))})
+
+
+@app.put("/history/<doc_id>")
+def save_history(doc_id):
+    data = request.get_json(silent=True) or {}
+    if history.enabled and valid_id(doc_id) and data.get("guest"):
+        history.save_paper(data["guest"], doc_id, data)
+    return jsonify({"enabled": history.enabled})
+
+
+@app.delete("/history/<doc_id>")
+def delete_history(doc_id):
+    if history.enabled and valid_id(doc_id):
+        history.delete_paper(request.args.get("guest", ""), doc_id)
+    return jsonify({"enabled": history.enabled})
+
+
+@app.post("/quiz")
+def quiz():
+    data = request.get_json(silent=True) or {}
+    try:
+        return jsonify({"questions": rag.quiz(str(data.get("doc_id", "")))})
     except LookupError:
         return jsonify({"error": "Paper not found. Please upload it again."}), 404
 

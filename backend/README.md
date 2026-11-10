@@ -4,6 +4,8 @@ The Flask API. It reads PDFs, writes summaries, answers questions with RAG, make
 
 ## 🚀 Setup
 
+Use **Python 3.10 to 3.14** (tested on 3.14). If you have 3.15, install 3.14 next to it and create the venv with `py -3.14 -m venv venv`.
+
 ```bash
 cd backend
 python -m venv venv
@@ -27,7 +29,6 @@ Using Supabase? Run [`supabase.sql`](supabase.sql) once in its SQL Editor.
 
 ## ▶️ Run
 
-Use **Python 3.10 to 3.14** (tested on 3.14). If you have 3.15, install 3.14 next to it and create the venv with `py -3.14 -m venv venv`.
 
 ```bash
 python main.py

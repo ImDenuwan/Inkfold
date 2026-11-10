@@ -86,9 +86,8 @@ export default function Workspace({ paper, onHome, onOpen }) {
             <button
               key={p.doc_id}
               onClick={() => onOpen(p)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition ${
-                p.doc_id === paper.doc_id ? "bg-card font-medium shadow-sm" : "text-muted hover:bg-card hover:text-ink"
-              }`}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition ${p.doc_id === paper.doc_id ? "bg-card font-medium shadow-sm" : "text-muted hover:bg-card hover:text-ink"
+                }`}
             >
               <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${p.doc_id === paper.doc_id ? "bg-accent" : "bg-line"}`} />
               <span className="truncate">{p.summary?.title || p.filename}</span>
@@ -104,7 +103,6 @@ export default function Workspace({ paper, onHome, onOpen }) {
           <p className="mt-1 text-xs text-muted">No account needed. Your papers are saved in this browser.</p>
           <a href="/privacy" className="mt-2 inline-block text-xs underline underline-offset-2">What we store</a>
         </div>
-        <ThemeToggle />
       </aside>
 
       <main className="min-w-0 flex-1 px-4 pb-10 sm:px-6">
@@ -132,6 +130,7 @@ export default function Workspace({ paper, onHome, onOpen }) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg>
               <span className="hidden sm:inline">Export</span>
             </button>
+            <ThemeToggle />
           </div>
         </div>
 
@@ -172,9 +171,8 @@ export default function Workspace({ paper, onHome, onOpen }) {
                   role="tab"
                   aria-selected={tab === id}
                   onClick={() => setTab(id)}
-                  className={`relative w-[4.75rem] rounded-lg py-1.5 font-medium transition-colors duration-300 ${
-                    tab === id ? "text-paper" : "text-muted hover:text-ink"
-                  }`}
+                  className={`relative w-[4.75rem] rounded-lg py-1.5 font-medium transition-colors duration-300 ${tab === id ? "text-paper" : "text-muted hover:text-ink"
+                    }`}
                 >
                   {label}
                 </button>

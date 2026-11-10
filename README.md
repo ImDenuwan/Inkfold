@@ -50,29 +50,7 @@ I built Inkfold for Mitra Innovation's technical assessment: a research assistan
 
 ## ⚙️ How it works
 
-```mermaid
-flowchart TB
-    subgraph Upload["📄 When you upload"]
-        direction LR
-        A[PDF] --> B[Read pages<br/>PyMuPDF]
-        B --> C{Keyword check:<br/>is it a paper?}
-        C -- no --> X[✗ Not a paper<br/>Continue anyway?]
-        C -- yes --> D[Gemini: check +<br/>5-part summary]
-        X -- continue --> D
-        D --> E[Split into<br/>400-word passages]
-        E --> F[(ChromaDB<br/>with page numbers)]
-    end
-
-    subgraph Ask["💬 When you ask"]
-        direction LR
-        Q[Question +<br/>chat history] --> G[Find 5 closest passages<br/>+ the abstract]
-        G --> H[Gemini answers<br/>only from them]
-        H --> I[Answer + pages +<br/>exact quotes]
-        I --> J[pdf.js highlights<br/>the sentence]
-    end
-
-    F -.-> G
-```
+   ![How Inkfold works](images/how-it-works.png)
 
 1. The backend reads the text of every page with PyMuPDF.
 2. A free keyword check (abstract, references, et al and so on) stops obvious non-papers. Gemini checks again while it summarises.

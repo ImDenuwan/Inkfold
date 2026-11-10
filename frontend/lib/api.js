@@ -18,11 +18,11 @@ export async function uploadPaper(file, force = false) {
   return handle(response);
 }
 
-export async function askQuestion(docId, question) {
+export async function askQuestion(docId, question, language, history = []) {
   const response = await fetch(`${API_URL}/ask`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ doc_id: docId, question }),
+    body: JSON.stringify({ doc_id: docId, question, language, history }),
   });
   return handle(response);
 }

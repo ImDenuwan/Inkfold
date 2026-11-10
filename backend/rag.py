@@ -1,12 +1,14 @@
 import json
 import os
 import re
+import time
 
 import chromadb
 import pymupdf
 from google import genai
+from google.genai import errors
 
-from prompts import ANSWER_PROMPT, FORCE_NOTE, QUIZ_PROMPT, SUMMARY_PROMPT
+from prompts import ANSWER_PROMPT, FORCE_NOTE, PICKED_LANGUAGE, QUIZ_PROMPT, SAME_LANGUAGE, SUMMARY_PROMPT
 
 if not os.getenv("GEMINI_API_KEY"):
     raise RuntimeError("Add GEMINI_API_KEY to backend/.env")
@@ -14,7 +16,7 @@ if not os.getenv("GEMINI_API_KEY"):
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 db = chromadb.PersistentClient(path="chroma_data")
 
-CHAT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+CHAT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 CHUNK_WORDS = 400
 OVERLAP = 50
@@ -28,7 +30,14 @@ def embed(texts):
 
 def generate(prompt, as_json=False):
     config = {"response_mime_type": "application/json"} if as_json else None
-    return client.models.generate_content(model=CHAT_MODEL, contents=prompt, config=config).text
+    for attempt in range(3):
+        try:
+            return client.models.generate_content(model=CHAT_MODEL, contents=prompt, config=config).text
+        except errors.APIError as e:
+            # Gemini sometimes says it's overloaded (503): wait a moment and try again
+            if e.code != 503 or attempt == 2:
+                raise
+            time.sleep(2 * (attempt + 1))
 
 
 def read_pdf(pdf_bytes):
@@ -102,15 +111,25 @@ def quiz(doc_id):
     return [q for q in questions if len(q.get("options", [])) == 4 and q.get("answer") in range(4)]
 
 
-def ask(doc_id, question):
+def ask(doc_id, question, language=None, history=()):
     collection = get_collection(doc_id)
 
-    hits = collection.query(query_embeddings=embed([question]), n_results=min(TOP_K, collection.count()))
-    passages = hits["documents"][0]
-    pages = [m["page"] for m in hits["metadatas"][0]]
+    # a follow-up like "explain please" means little alone, so search with the last question too
+    last_question = next((m["text"] for m in reversed(history) if m["role"] == "user"), "")
+    search = f"{last_question}\n{question}".strip()
+    hits = collection.query(query_embeddings=embed([search]), n_results=min(TOP_K, collection.count()))
 
-    context = "\n\n".join(f"[Page {p}] {t}" for p, t in zip(pages, passages))
-    reply = json.loads(generate(ANSWER_PROMPT.format(context=context, question=question), as_json=True))
+    # always include the opening of the paper (title and abstract) for general questions
+    opening = collection.get(ids=[f"{doc_id}-0", f"{doc_id}-1"], include=["documents", "metadatas"])
+    found = list(zip(hits["ids"][0], hits["documents"][0], hits["metadatas"][0]))
+    found += [row for row in zip(opening["ids"], opening["documents"], opening["metadatas"]) if row[0] not in hits["ids"][0]]
+    pages = [m["page"] for _, _, m in found]
+
+    context = "\n\n".join(f"[Page {m['page']}] {t}" for _, t, m in found)
+    chat = "\n".join(f"{'Student' if m['role'] == 'user' else 'Inkfold'}: {m['text']}" for m in history) or "(this is the first question)"
+    rule = PICKED_LANGUAGE.format(language=language) if language else SAME_LANGUAGE
+    prompt = ANSWER_PROMPT.format(context=context, question=question, language_rule=rule, history=chat)
+    reply = json.loads(generate(prompt, as_json=True))
     answer = reply.get("answer", "")
 
     # only return the pages the answer actually cites

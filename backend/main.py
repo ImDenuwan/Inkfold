@@ -18,7 +18,8 @@ os.makedirs(UPLOADS, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
-CORS(app, origins=["http://localhost:3000"], methods=["GET", "POST", "PUT", "DELETE"])
+# FRONTEND_URL lets the hosted site (e.g. on Vercel) call this API
+CORS(app, origins=os.getenv("FRONTEND_URL", "http://localhost:3000").split(","), methods=["GET", "POST", "PUT", "DELETE"])
 
 
 @app.get("/")
@@ -71,7 +72,15 @@ def ask():
         return jsonify({"error": "Please type a question."}), 400
 
     try:
-        return jsonify(rag.ask(doc_id, question))
+        # "Answer in" picker: only these languages are allowed
+        language = data.get("language") if data.get("language") in ("English", "Sinhala", "Tamil") else None
+        # the last few messages, so follow-ups like "explain please" make sense
+        chat = [
+            {"role": m["role"], "text": str(m["text"])[:1500]}
+            for m in (data.get("history") or [])[-6:]
+            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and m.get("text")
+        ]
+        return jsonify(rag.ask(doc_id, question, language, chat))
     except LookupError:
         return jsonify({"error": "Paper not found. Please upload it again."}), 404
 
@@ -130,6 +139,8 @@ def server_error(e):
 
 @app.errorhandler(errors.APIError)
 def gemini_error(e):
+    # print the real reason in the terminal, so we can see what went wrong
+    app.logger.error("Gemini error %s: %s", e.code, e.message)
     if e.code == 429:
         return jsonify({"error": "Too many requests right now. Wait a minute and try again."}), 429
     return jsonify({"error": "The AI service had a problem. Please try again."}), 502

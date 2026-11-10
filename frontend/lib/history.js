@@ -22,7 +22,8 @@ export function guestId() {
   try {
     let id = localStorage.getItem("inkfold-guest");
     if (!id) {
-      id = crypto.randomUUID();
+      // randomUUID only works on https, so fall back to a random string
+      id = crypto.randomUUID?.() || Math.random().toString(36).slice(2) + Date.now().toString(36);
       localStorage.setItem("inkfold-guest", id);
     }
     return id;

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Logo from "./Logo";
 import ThemeToggle from "./ThemeToggle";
+import { AccountButton, AccountCard } from "./Account";
+import { useUser } from "../lib/useUser";
 import Summary, { Cite } from "./Summary";
 import Chat from "./Chat";
 import Quiz from "./Quiz";
@@ -40,6 +42,7 @@ function useDesktop() {
 
 export default function Workspace({ paper, onHome, onOpen }) {
   const desktop = useDesktop();
+  const user = useUser();
   const [tab, setTab] = useState("summary");
   const [language, setLanguage] = useState("");
   const [showPaper, setShowPaper] = useState(false); // phones only
@@ -81,13 +84,14 @@ export default function Workspace({ paper, onHome, onOpen }) {
         </button>
 
         <nav aria-label="Recent papers" className="hidden min-h-0 flex-1 overflow-y-auto lg:block">
-          <h2 className="mb-2 text-xs font-semibold tracking-wider text-muted">RECENT IN THIS BROWSER</h2>
+          <h2 className="mb-2 text-xs font-semibold tracking-wider text-muted">{user ? "YOUR PAPERS" : "RECENT IN THIS BROWSER"}</h2>
           {recent.slice(0, 8).map((p) => (
             <button
               key={p.doc_id}
               onClick={() => onOpen(p)}
-              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition ${p.doc_id === paper.doc_id ? "bg-card font-medium shadow-sm" : "text-muted hover:bg-card hover:text-ink"
-                }`}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition ${
+                p.doc_id === paper.doc_id ? "bg-card font-medium shadow-sm" : "text-muted hover:bg-card hover:text-ink"
+              }`}
             >
               <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${p.doc_id === paper.doc_id ? "bg-accent" : "bg-line"}`} />
               <span className="truncate">{p.summary?.title || p.filename}</span>
@@ -95,13 +99,12 @@ export default function Workspace({ paper, onHome, onOpen }) {
           ))}
         </nav>
 
-        <div className="hidden rounded-2xl border border-line bg-card p-4 lg:block">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>
-            Guest mode
-          </p>
-          <p className="mt-1 text-xs text-muted">No account needed. Your papers are saved in this browser.</p>
-          <a href="/privacy" className="mt-2 inline-block text-xs underline underline-offset-2">What we store</a>
+        <div className="hidden lg:block">
+          <AccountCard />
+        </div>
+        {/* on phones the sidebar is a top bar, so just the button */}
+        <div className="lg:hidden">
+          <AccountButton />
         </div>
       </aside>
 
@@ -171,8 +174,9 @@ export default function Workspace({ paper, onHome, onOpen }) {
                   role="tab"
                   aria-selected={tab === id}
                   onClick={() => setTab(id)}
-                  className={`relative w-[4.75rem] rounded-lg py-1.5 font-medium transition-colors duration-300 ${tab === id ? "text-paper" : "text-muted hover:text-ink"
-                    }`}
+                  className={`relative w-[4.75rem] rounded-lg py-1.5 font-medium transition-colors duration-300 ${
+                    tab === id ? "text-paper" : "text-muted hover:text-ink"
+                  }`}
                 >
                   {label}
                 </button>

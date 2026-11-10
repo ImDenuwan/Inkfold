@@ -14,9 +14,10 @@ if not os.getenv("GEMINI_API_KEY"):
     raise RuntimeError("Add GEMINI_API_KEY to backend/.env")
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-db = chromadb.PersistentClient(path="chroma_data")
+DATA_DIR = os.getenv("DATA_DIR") or "."
+db = chromadb.PersistentClient(path=os.path.join(DATA_DIR, "chroma_data"))
 
-CHAT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+CHAT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
 CHUNK_WORDS = 400
 OVERLAP = 50
@@ -114,12 +115,10 @@ def quiz(doc_id):
 def ask(doc_id, question, language=None, history=()):
     collection = get_collection(doc_id)
 
-    # a follow-up like "explain please" means little alone, so search with the last question too
     last_question = next((m["text"] for m in reversed(history) if m["role"] == "user"), "")
     search = f"{last_question}\n{question}".strip()
     hits = collection.query(query_embeddings=embed([search]), n_results=min(TOP_K, collection.count()))
 
-    # always include the opening of the paper (title and abstract) for general questions
     opening = collection.get(ids=[f"{doc_id}-0", f"{doc_id}-1"], include=["documents", "metadatas"])
     found = list(zip(hits["ids"][0], hits["documents"][0], hits["metadatas"][0]))
     found += [row for row in zip(opening["ids"], opening["documents"], opening["metadatas"]) if row[0] not in hits["ids"][0]]
@@ -132,7 +131,6 @@ def ask(doc_id, question, language=None, history=()):
     reply = json.loads(generate(prompt, as_json=True))
     answer = reply.get("answer", "")
 
-    # only return the pages the answer actually cites
     cited = {int(n) for n in re.findall(r"p\.\s*(\d+)", answer)} & set(pages)
     # the sentences to highlight in the preview, for cited pages only
     quotes = [q for q in reply.get("quotes", []) if q.get("page") in cited and q.get("text")]

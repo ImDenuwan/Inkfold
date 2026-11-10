@@ -1,9 +1,10 @@
-import { API_URL } from "./api";
+import { API_URL, authHeaders } from "./api";
 
 const KEY = "inkfold-history";
+const GUEST_HOURS = 12; // matches GUEST_HOURS on the backend
 
 // localStorage can be blocked (private mode), so every use is wrapped
-function readLocal() {
+export function readLocal() {
   try {
     return JSON.parse(localStorage.getItem(KEY)) || [];
   } catch {
@@ -35,23 +36,28 @@ export function guestId() {
 // Supabase if the backend has it set up, otherwise this browser
 export async function loadHistory() {
   try {
-    const data = await (await fetch(`${API_URL}/history?guest=${guestId()}`)).json();
+    const response = await fetch(`${API_URL}/history?guest=${guestId()}`, { headers: await authHeaders() });
+    const data = await response.json();
     if (data.enabled) return data.papers;
   } catch {}
-  return readLocal();
+  // guest papers are deleted on the server after a while, so hide old ones here too
+  const cutoff = Date.now() - GUEST_HOURS * 3600 * 1000;
+  return readLocal().filter((p) => new Date(p.created_at || p.updated_at) > cutoff);
 }
 
-export function saveHistory({ doc_id, filename, summary, messages = [] }) {
-  const entry = { doc_id, filename, summary, messages, updated_at: new Date().toISOString() };
+export async function saveHistory({ doc_id, filename, summary, messages = [] }) {
+  const old = readLocal().find((p) => p.doc_id === doc_id);
+  const now = new Date().toISOString();
+  const entry = { doc_id, filename, summary, messages, created_at: old?.created_at || now, updated_at: now };
   writeLocal([entry, ...readLocal().filter((p) => p.doc_id !== doc_id)]);
   fetch(`${API_URL}/history/${doc_id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: await authHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({ guest: guestId(), ...entry }),
   }).catch(() => {});
 }
 
-export function removeHistory(docId) {
+export async function removeHistory(docId) {
   writeLocal(readLocal().filter((p) => p.doc_id !== docId));
-  fetch(`${API_URL}/history/${docId}?guest=${guestId()}`, { method: "DELETE" }).catch(() => {});
+  fetch(`${API_URL}/history/${docId}?guest=${guestId()}`, { method: "DELETE", headers: await authHeaders() }).catch(() => {});
 }

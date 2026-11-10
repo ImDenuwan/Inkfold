@@ -5,6 +5,7 @@ import Logo from "../components/Logo";
 import Upload from "../components/Upload";
 import Workspace from "../components/Workspace";
 import ThemeToggle from "../components/ThemeToggle";
+import { AccountButton } from "../components/Account";
 import StorageNotice from "../components/StorageNotice";
 import { saveHistory } from "../lib/history";
 
@@ -35,6 +36,7 @@ export default function Home() {
           <a href="#demo" className="hidden rounded-xl px-3 py-2 text-muted transition hover:text-ink sm:block">See it work</a>
           <a href="#recent" className="hidden rounded-xl px-3 py-2 text-muted transition hover:text-ink sm:block">My papers</a>
           <ThemeToggle />
+          <AccountButton />
         </nav>
       </header>
 

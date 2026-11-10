@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Everything on the home page below the upload box
 
@@ -12,27 +12,85 @@ const STEPS = [
   ["03", "Ask questions", "Chat in plain language. Answers come only from the paper, with page numbers."],
 ];
 
+const YOUTUBE_ID = "cOjJavqO17c";
+const CROP = 120;
+
+function send(frame, func) {
+  frame?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), "*");
+}
+
 function Demo() {
+  const frame = useRef(null);
+  const [started, setStarted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [fallback, setFallback] = useState(false);
+
+
+  useEffect(() => {
+    function onMessage(e) {
+      if (!String(e.origin).includes("youtube")) return;
+      try {
+        const state = JSON.parse(e.data)?.info?.playerState;
+        if (state !== undefined) setPlaying(state === 1);
+      } catch { }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    const timer = setTimeout(() => setFallback((f) => f || !playing), 3000);
+    return () => clearTimeout(timer);
+  }, [started, playing]);
+
+  function toggle() {
+    if (!started) return setStarted(true);
+    send(frame.current, playing ? "pauseVideo" : "playVideo");
+  }
+
   return (
     <section
       id="demo"
       aria-label="Product demo"
-      className="mt-20 w-full max-w-5xl scroll-mt-24 animate-rise rounded-[26px] bg-[#111110] p-2 text-left shadow-[0_50px_90px_-50px_rgba(17,17,16,0.55)] sm:p-3.5"
+      className="mt-12 w-full max-w-5xl min-w-0 scroll-mt-24 animate-rise overflow-hidden rounded-2xl bg-[#111110] p-1.5 shadow-[0_30px_60px_-35px_rgba(17,17,16,0.55)] sm:mt-20 sm:rounded-[26px] sm:p-3.5 sm:shadow-[0_50px_90px_-50px_rgba(17,17,16,0.55)]"
       style={{ animationDelay: "400ms" }}
     >
-      <div className="flex items-center gap-2 px-2 pt-1.5 pb-3">
+      <div className="hidden items-center gap-2 px-2 pt-1.5 pb-3 sm:flex">
         {[0, 1, 2].map((i) => <span key={i} className="h-2.5 w-2.5 rounded-full bg-[#3a3934]" />)}
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl bg-black">
-        <iframe
-          src="https://drive.google.com/file/d/1NS4pUn7bZhbmvNXr-q6BBFwjP0dMjLLg/preview"
-          title="Inkfold demo video"
-          allow="autoplay; fullscreen"
-          allowFullScreen
-          loading="lazy"
-          className="block aspect-video w-full"
-        />
+      <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black sm:rounded-2xl">
+        {started && (
+          <iframe
+            ref={frame}
+            src={`https://www.youtube-nocookie.com/embed/${YOUTUBE_ID}?autoplay=1&controls=0&rel=0&playsinline=1&fs=0&disablekb=1&iv_load_policy=3&loop=1&playlist=${YOUTUBE_ID}&enablejsapi=1`}
+            title="Inkfold demo video"
+            allow="autoplay; encrypted-media"
+            // ask YouTube to send us play/pause updates
+            onLoad={() => frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "listening" }), "*")}
+            className="absolute left-0 w-full"
+            style={{ top: -CROP, height: `calc(100% + ${CROP * 2}px)` }}
+          />
+        )}
+
+        {!fallback && (
+          <button
+            onClick={toggle}
+            aria-label={playing ? "Pause the demo video" : "Play the demo video"}
+            className="group absolute inset-0 z-10 h-full w-full"
+          >
+            {!started && <img src="/demo-poster.jpg" alt="" className="h-full w-full object-cover" />}
+            {!playing && (
+              <>
+                <span className={`absolute inset-0 ${started ? "bg-black/45" : "bg-black/15 group-hover:bg-black/5"} transition`} />
+                <span className="absolute top-1/2 left-1/2 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-accent text-[#111110] shadow-xl transition group-hover:scale-110 sm:h-20 sm:w-20">
+                  <svg className="ml-1 h-6 w-6 sm:h-8 sm:w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+                </span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </section>
   );

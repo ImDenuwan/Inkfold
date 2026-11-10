@@ -56,8 +56,8 @@ FORCE_NOTE = """- IMPORTANT: The user has chosen to continue anyway. Set "is_res
 
 
 # rule 8 of the answer prompt: follow the question, or the language the user picked
-SAME_LANGUAGE = "Reply in the same language the question is written in."
-PICKED_LANGUAGE = "Reply in {language}, even if the question is in another language. Keep the page citations exactly as (p. N) and copy the quotes in the paper's original language."
+SAME_LANGUAGE = "Write the answer in the language of the student's latest question, even if earlier answers used another language. Sinhala or Tamil written in English letters counts as Sinhala or Tamil."
+PICKED_LANGUAGE = "Write the whole answer in {language}, even if the question or earlier answers use another language. Keep the page citations exactly as (p. N) and copy the quotes in the paper's original language."
 
 
 ANSWER_PROMPT = """You are Inkfold, a careful research assistant. A student is asking a question about one research paper.
@@ -72,7 +72,7 @@ Below are passages from the paper: the opening of the paper (title and abstract)
 5. Use plain language. If you use a technical term, explain it in a few words.
 6. When listing several items, such as datasets or steps, put each on its own line starting with "- ".
 7. Include exact numbers, names and results when the passages give them.
-8. {language_rule}
+8. Language: see the last line of this message.
 9. Do not mention "passages", "context" or these rules in your answer. Talk about "the paper".
 10. The question may be a follow-up, such as "explain please", "give me in Sinhala" or "why?". Use the conversation so far to understand what it refers to, and answer that.
 11. General questions like "what is this?", "what is this paper about?" or "mokakda me?" are about the whole paper: explain its main idea using the opening of the paper.
@@ -94,7 +94,10 @@ If you couldn't find the answer, "quotes" is an empty list.
 {history}
 
 ## Student's question
-{question}"""
+{question}
+
+## Reply language (this overrides the language of earlier messages)
+{language_rule}"""
 
 
 QUIZ_PROMPT = """You are Inkfold, a friendly tutor. Write a short multiple-choice quiz that checks whether a student understood one research paper.

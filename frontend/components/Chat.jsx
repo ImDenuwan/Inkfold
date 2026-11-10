@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { askQuestion } from "../lib/api";
+import PaperPlane from "./PaperPlane";
 
 // One small button per page number. Clicking opens the paper at that page.
 function PageLink({ page, onCite }) {
@@ -29,16 +30,18 @@ function Answer({ text, onCite }) {
   );
 }
 
-export default function Chat({ docId, suggestions, onCite, initialMessages = [], onChange }) {
+export default function Chat({ docId, suggestions, onCite, initialMessages = [], onChange, language }) {
   const [messages, setMessages] = useState(initialMessages);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [flight, setFlight] = useState(0);
   const listRef = useRef(null);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, loading]);
 
+  // save the chat after every new message (errors are not saved)
   useEffect(() => {
     if (messages.length) onChange?.(messages.filter((m) => m.role !== "error"));
   }, [messages]);
@@ -49,9 +52,12 @@ export default function Chat({ docId, suggestions, onCite, initialMessages = [],
 
     setMessages((prev) => [...prev, { role: "user", text }]);
     setQuestion("");
+    setFlight((n) => n + 1); // launch a paper plane
     setLoading(true);
     try {
-      const reply = await askQuestion(docId, text);
+      // send the earlier messages too, so follow-ups like "explain please" work
+      const history = messages.filter((m) => m.role !== "error").map(({ role, text }) => ({ role, text }));
+      const reply = await askQuestion(docId, text, language, history);
       setMessages((prev) => [...prev, { role: "assistant", text: reply.answer, sources: reply.sources, quotes: reply.quotes }]);
     } catch (err) {
       setMessages((prev) => [...prev, { role: "error", text: err.message }]);
@@ -62,10 +68,11 @@ export default function Chat({ docId, suggestions, onCite, initialMessages = [],
 
   return (
     <section
-      className="flex h-[70vh] min-h-[460px] animate-rise flex-col rounded-3xl border border-line bg-white p-6 lg:sticky lg:top-6 lg:h-[calc(100vh-10rem)]"
+      className="relative flex h-[70vh] min-h-[460px] animate-rise flex-col rounded-3xl border border-line bg-card p-6 lg:h-[calc(100vh-12.5rem)]"
       style={{ animationDelay: "120ms" }}
     >
       <h2 className="text-xs font-semibold uppercase tracking-widest text-accent">Ask the paper</h2>
+      {flight > 0 && <PaperPlane key={flight} onDone={() => setFlight(0)} />}
 
       <div ref={listRef} className="mt-4 flex flex-1 flex-col gap-4 overflow-y-auto pr-1">
         {messages.length === 0 && (
@@ -89,11 +96,11 @@ export default function Chat({ docId, suggestions, onCite, initialMessages = [],
 
         {messages.map((msg, i) =>
           msg.role === "user" ? (
-            <p key={i} className="max-w-[85%] animate-rise self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-white">
+            <p key={i} className="max-w-[85%] animate-rise self-end rounded-2xl rounded-br-md bg-ink px-4 py-2.5 text-paper">
               {msg.text}
             </p>
           ) : msg.role === "error" ? (
-            <p key={i} className="animate-rise text-sm text-red-700">{msg.text}</p>
+            <p key={i} className="animate-rise text-sm text-red-700 dark:text-red-400">{msg.text}</p>
           ) : (
             <div key={i} className="animate-rise rounded-2xl border border-line bg-paper p-4">
               <Answer text={msg.text} onCite={(page) => onCite(page, msg.quotes)} />
@@ -133,7 +140,7 @@ export default function Chat({ docId, suggestions, onCite, initialMessages = [],
         <button
           type="submit"
           disabled={loading}
-          className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-ink transition hover:brightness-95 disabled:opacity-50"
+          className="rounded-xl bg-accent px-5 py-2.5 font-semibold text-on-accent transition hover:brightness-95 disabled:opacity-50"
         >
           Ask
         </button>

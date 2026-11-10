@@ -9,6 +9,8 @@
   [![Forks][forks-shield]][forks-url]
   [![Issues][issues-shield]][issues-url]
   [![MIT License][license-shield]][license-url]
+  [![Tests][tests-shield]][tests-url]
+
 </div>
 
 <br>
@@ -78,6 +80,16 @@ cd Inkfold
 
 Supabase is optional. Without it, everyone uses Inkfold as a guest.
 
+## 🧪 Tests
+
+30 backend tests check the summary, chat, quiz, paper check, languages and guest cleanup. They use a fake Gemini, so no API key is needed. GitHub Actions runs them on every push.
+
+```bash
+cd backend
+pip install pytest
+pytest -v
+```
+
 ## 📁 Project structure
 
 ```
@@ -116,3 +128,5 @@ MIT. See [LICENSE](LICENSE).
 [issues-url]: https://github.com/ImDenuwan/Inkfold/issues
 [license-shield]: https://img.shields.io/github/license/ImDenuwan/Inkfold.svg?style=for-the-badge&v=2
 [license-url]: https://github.com/ImDenuwan/Inkfold/blob/main/LICENSE
+[tests-shield]:https://github.com/ImDenuwan/Inkfold/actions/workflows/tests.yml/badge.svg
+[tests-url]:https://github.com/ImDenuwan/Inkfold/actions/workflows/tests.yml

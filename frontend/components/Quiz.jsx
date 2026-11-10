@@ -28,7 +28,7 @@ export default function Quiz({ docId, onCite }) {
   const score = Object.entries(picked).filter(([i, o]) => questions[i].answer === o).length;
 
   return (
-    <section className="animate-rise rounded-3xl border border-line bg-white p-6 sm:p-8">
+    <section className="animate-rise rounded-3xl border border-line bg-card p-6 sm:p-8">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-accent">Quiz me</h2>
         {questions && (
@@ -45,11 +45,11 @@ export default function Quiz({ docId, onCite }) {
           <button
             onClick={start}
             disabled={loading}
-            className="mt-6 rounded-xl bg-ink px-6 py-3 font-medium text-white transition hover:bg-black disabled:opacity-60"
+            className="mt-6 rounded-xl bg-ink px-6 py-3 font-medium text-paper transition hover:opacity-90 disabled:opacity-60"
           >
             {loading ? "Writing your quiz..." : "Start quiz"}
           </button>
-          {error && <p className="mt-4 text-sm text-red-700">{error}</p>}
+          {error && <p className="mt-4 text-sm text-red-700 dark:text-red-400">{error}</p>}
         </div>
       )}
 
@@ -68,9 +68,9 @@ export default function Quiz({ docId, onCite }) {
                 const look = !done
                   ? "border-line hover:border-ink"
                   : o === q.answer
-                    ? "border-green-600 bg-green-50"
+                    ? "border-green-600 bg-green-50 dark:bg-green-950/40"
                     : o === choice
-                      ? "border-red-600 bg-red-50"
+                      ? "border-red-600 bg-red-50 dark:bg-red-950/40"
                       : "border-line opacity-60";
                 return (
                   <button
@@ -87,7 +87,7 @@ export default function Quiz({ docId, onCite }) {
             </div>
             {done && (
               <p className="mt-3 text-sm text-muted">
-                <span className={`font-semibold ${choice === q.answer ? "text-green-700" : "text-red-700"}`}>
+                <span className={`font-semibold ${choice === q.answer ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}>
                   {choice === q.answer ? "Correct. " : "Not quite. "}
                 </span>
                 {q.explanation}{" "}

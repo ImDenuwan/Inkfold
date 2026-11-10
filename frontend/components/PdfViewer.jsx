@@ -43,6 +43,7 @@ export default function PdfViewer({ file, url, page, quotes, onPage }) {
   const [marks, setMarks] = useState([]);
   const scrollRef = useRef(null);
   const canvasRef = useRef(null);
+  const drag = useRef(null);
 
   // load the PDF (pdf.js only runs in the browser)
   useEffect(() => {
@@ -100,12 +101,39 @@ export default function PdfViewer({ file, url, page, quotes, onPage }) {
     if (marks.length) scrollRef.current?.scrollTo({ top: marks[0].top - 80, behavior: "smooth" });
   }, [marks]);
 
+  // ctrl (or cmd) + mouse wheel zooms, like a normal PDF reader
+  useEffect(() => {
+    const box = scrollRef.current;
+    function onWheel(e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((z) => Math.min(3, Math.max(0.5, z + (e.deltaY < 0 ? 0.25 : -0.25))));
+    }
+    box.addEventListener("wheel", onWheel, { passive: false });
+    return () => box.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // hand tool: hold the mouse and drag to move the page (touch scrolls by itself)
+  function startDrag(e) {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    const box = scrollRef.current;
+    drag.current = { x: e.clientX, y: e.clientY, left: box.scrollLeft, top: box.scrollTop };
+    box.setPointerCapture(e.pointerId);
+  }
+
+  function moveDrag(e) {
+    if (!drag.current) return;
+    const box = scrollRef.current;
+    box.scrollLeft = drag.current.left - (e.clientX - drag.current.x);
+    box.scrollTop = drag.current.top - (e.clientY - drag.current.y);
+  }
+
   const total = pdf?.numPages || 1;
 
   return (
     <section
       id="viewer"
-      className="flex h-[75vh] animate-rise scroll-mt-4 flex-col overflow-hidden rounded-3xl border border-line bg-white lg:sticky lg:top-6 lg:h-[calc(100vh-10rem)]"
+      className="flex h-[75vh] animate-rise scroll-mt-4 flex-col overflow-hidden rounded-3xl border border-line bg-card lg:sticky lg:top-4 lg:h-[calc(100vh-6.5rem)]"
     >
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5 text-sm sm:px-5">
         <div className="flex items-center gap-1.5">
@@ -123,7 +151,14 @@ export default function PdfViewer({ file, url, page, quotes, onPage }) {
       </div>
 
       {/* the page scrolls inside this box, so the toolbar never moves */}
-      <div ref={scrollRef} className="flex-1 overflow-auto bg-paper p-4">
+      <div
+        ref={scrollRef}
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={() => (drag.current = null)}
+        onPointerCancel={() => (drag.current = null)}
+        className="flex-1 cursor-grab select-none overflow-auto bg-paper p-4 active:cursor-grabbing"
+      >
         <div className="relative mx-auto w-fit shadow-sm">
           <canvas ref={canvasRef} className="block bg-white" />
           {marks.map((m, i) => (

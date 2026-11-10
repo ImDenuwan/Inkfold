@@ -10,15 +10,17 @@ from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from google.genai import errors
 
+import auth
+import cleanup
 import history
 import rag
 
-UPLOADS = "uploads"
+UPLOADS = os.path.join(rag.DATA_DIR, "uploads")
 os.makedirs(UPLOADS, exist_ok=True)
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
-CORS(app, origins=["http://localhost:3000"], methods=["GET", "POST", "PUT", "DELETE"])
+CORS(app, origins=(os.getenv("FRONTEND_URL") or "http://localhost:3000").split(","), methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Content-Type", "Authorization"])
 
 
 @app.get("/")
@@ -55,7 +57,12 @@ def upload():
     # keep the PDF so the paper can be reopened from history
     with open(os.path.join(UPLOADS, f"{doc_id}.pdf"), "wb") as f:
         f.write(pdf_bytes)
-    return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": summary})
+
+    # signed-in papers are kept; guest papers are deleted after GUEST_HOURS
+    user = auth.current_user(request)
+    cleanup.add(doc_id, keep=bool(user))
+    expires = None if user else cleanup.GUEST_HOURS
+    return jsonify({"doc_id": doc_id, "filename": file.filename, "summary": summary, "expires_in_hours": expires})
 
 
 def not_paper():
@@ -71,7 +78,13 @@ def ask():
         return jsonify({"error": "Please type a question."}), 400
 
     try:
-        return jsonify(rag.ask(doc_id, question))
+        language = data.get("language") if data.get("language") in ("English", "Sinhala", "Tamil") else None
+        chat = [
+            {"role": m["role"], "text": str(m["text"])[:1500]}
+            for m in (data.get("history") or [])[-6:]
+            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and m.get("text")
+        ]
+        return jsonify(rag.ask(doc_id, question, language, chat))
     except LookupError:
         return jsonify({"error": "Paper not found. Please upload it again."}), 404
 
@@ -87,26 +100,51 @@ def pdf(doc_id):
     return send_from_directory(UPLOADS, f"{doc_id}.pdf", mimetype="application/pdf")
 
 
+def owner():
+    """A signed-in user owns their papers; otherwise the browser's guest id does."""
+    user = auth.current_user(request)
+    guest = (request.get_json(silent=True) or {}).get("guest") or request.args.get("guest", "")
+    return (user, True) if user else (str(guest)[:64], False)
+
+
 @app.get("/history")
 def list_history():
     if not history.enabled:
         return jsonify({"enabled": False})
-    return jsonify({"enabled": True, "papers": history.list_papers(request.args.get("guest", ""))})
+    who, signed_in = owner()
+    return jsonify({"enabled": True, "signed_in": signed_in, "papers": history.list_papers(who) if who else []})
 
 
 @app.put("/history/<doc_id>")
 def save_history(doc_id):
-    data = request.get_json(silent=True) or {}
-    if history.enabled and valid_id(doc_id) and data.get("guest"):
-        history.save_paper(data["guest"], doc_id, data)
+    who, signed_in = owner()
+    if history.enabled and valid_id(doc_id) and who:
+        history.save_paper(who, signed_in, doc_id, request.get_json(silent=True) or {})
+        if signed_in:
+            cleanup.keep([doc_id])
     return jsonify({"enabled": history.enabled})
 
 
 @app.delete("/history/<doc_id>")
 def delete_history(doc_id):
-    if history.enabled and valid_id(doc_id):
-        history.delete_paper(request.args.get("guest", ""), doc_id)
+    who, _ = owner()
+    if history.enabled and valid_id(doc_id) and who:
+        history.delete_paper(who, doc_id)
     return jsonify({"enabled": history.enabled})
+
+
+@app.post("/claim")
+def claim():
+    """Right after signing in: move this browser's guest papers to the account and keep them."""
+    user = auth.current_user(request)
+    if not user:
+        return jsonify({"error": "Please sign in first."}), 401
+    data = request.get_json(silent=True) or {}
+    doc_ids = [d for d in data.get("doc_ids", []) if isinstance(d, str) and valid_id(d)]
+    if history.enabled and data.get("guest"):
+        doc_ids += history.claim(str(data["guest"])[:64], user)
+    cleanup.keep(doc_ids)
+    return jsonify({"kept": len(set(doc_ids))})
 
 
 @app.post("/quiz")
@@ -130,10 +168,13 @@ def server_error(e):
 
 @app.errorhandler(errors.APIError)
 def gemini_error(e):
+    app.logger.error("Gemini error %s: %s", e.code, e.message)
     if e.code == 429:
         return jsonify({"error": "Too many requests right now. Wait a minute and try again."}), 429
     return jsonify({"error": "The AI service had a problem. Please try again."}), 502
 
+
+cleanup.start(UPLOADS)
 
 if __name__ == "__main__":
     app.run(port=8000, debug=True)

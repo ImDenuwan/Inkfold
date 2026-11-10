@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { uploadPaper } from "../lib/api";
 import { loadHistory, removeHistory } from "../lib/history";
+import { useUser } from "../lib/useUser";
+import { supabase } from "../lib/supabase";
 import { ImageGenerationLoader } from "./ui/ImageGenerationLoader";
 import LandingSections from "./LandingSections";
 
@@ -19,6 +21,7 @@ export default function Upload({ onUploaded }) {
   const [error, setError] = useState("");
   const [rejected, setRejected] = useState(null);
   const [recent, setRecent] = useState([]);
+  const user = useUser();
 
   // papers this guest opened before
   useEffect(() => {
@@ -200,7 +203,9 @@ export default function Upload({ onUploaded }) {
           <div className="flex items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-2xl font-bold tracking-tight">Pick up where you left off</h2>
-              <p className="mt-1 text-sm text-muted">Saved in this browser. Nothing is shared or tracked.</p>
+              <p className="mt-1 text-sm text-muted">
+                {user ? "Saved to your account." : `Guest papers are deleted after 12 hours.${supabase ? " Sign in to keep them." : ""}`}
+              </p>
             </div>
           </div>
 

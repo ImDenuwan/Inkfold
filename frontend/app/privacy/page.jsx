@@ -48,9 +48,9 @@ export default function Privacy() {
           <section id="summary" className="mt-8 scroll-mt-6 rounded-2xl border border-line bg-card p-6">
             <h2 className="mb-4 font-display text-xl font-bold">In short</h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <p className="flex gap-2.5 text-[15px]"><Check />No account needed to use Inkfold</p>
+              <p className="flex gap-2.5 text-[15px]"><Check />No account needed. Sign-in is optional</p>
               <p className="flex gap-2.5 text-[15px]"><Check />No cookies, no ads, no tracking</p>
-              <p className="flex gap-2.5 text-[15px]"><Check />Remove any paper from your history at any time</p>
+              <p className="flex gap-2.5 text-[15px]"><Check />Guest papers are deleted after 12 hours</p>
               <p className="flex gap-2.5 text-[15px]"><Check warn />Paper text is sent to an AI service to make summaries and answers</p>
             </div>
           </section>
@@ -61,13 +61,19 @@ export default function Privacy() {
             <ul className="list-disc space-y-1 pl-5 text-muted">
               <li>On the Inkfold server: the PDFs you upload, so you can reopen them, and their text split into passages for answering questions</li>
               <li>In your browser: your recent papers, their summaries and your chats</li>
-              <li>Only if the server owner turns it on: the same history in a Supabase database, linked to a random guest id</li>
+              <li>If Supabase is turned on: the same history in a Supabase database, linked to your account or to a random guest id</li>
+              <li>If you sign in: your email address, kept by Supabase Auth</li>
             </ul>
+            <h3 className={h3}>How long it is kept</h3>
+            <p className="text-muted">
+              Guest papers are deleted after 12 hours: the PDF, its passages and its history. Papers you upload or open while signed in are
+              kept until you remove them. Signing in also keeps the guest papers from this browser.
+            </p>
             <h3 className={h3}>What is never done</h3>
             <ul className="list-disc space-y-1 pl-5 text-muted">
               <li>Selling or sharing your data with advertisers</li>
               <li>Tracking you across other websites</li>
-              <li>Asking for your name or email</li>
+              <li>Asking for your email, unless you choose to sign in</li>
             </ul>
           </section>
 
@@ -79,6 +85,7 @@ export default function Privacy() {
                 ["inkfold-guest", "A random id for this browser, instead of an account"],
                 ["inkfold-theme", "Light or dark mode"],
                 ["inkfold-notice", "Remembers that you closed the storage note"],
+                ["sb-…-auth-token", "Keeps you signed in (only if you sign in)"],
               ].map(([name, purpose]) => (
                 <div key={name} className="grid gap-1 border-b border-line px-5 py-3 last:border-0 sm:grid-cols-[180px_1fr]">
                   <code className="text-sm">{name}</code>

@@ -45,3 +45,5 @@ node_modules/
 
 .vscode
 backend/uploads/
+
+backend/docs.json

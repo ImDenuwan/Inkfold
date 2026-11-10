@@ -19,7 +19,7 @@
 
 ## 📖 About
 
-I built Inkfold for Mitra Innovation's technical assessment: a research assistant for PDFs. You upload one paper, Inkfold writes a five-part summary, and you can chat with the paper. Answers come only from the paper, so each one cites its pages, and clicking a citation opens the PDF with the sentence highlighted.
+Inkfold is a research assistant for PDFs. You upload one paper, Inkfold writes a five-part summary, and you can chat with the paper. Answers come only from the paper, so each one cites its pages, and clicking a citation opens the PDF with the sentence highlighted.
 
 ## ✨ Features
 

@@ -9,9 +9,15 @@ export const metadata = {
   description: "Upload a research paper, get a structured summary, and ask questions with page citations.",
 };
 
+// runs before the page paints, so a dark-mode user never sees a white flash
+const themeScript = `try{if(localStorage.getItem("inkfold-theme")==="dark")document.documentElement.classList.add("dark")}catch(e){}`;
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${interTight.variable}`}>
+    <html lang="en" className={`${inter.variable} ${interTight.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

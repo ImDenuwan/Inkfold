@@ -47,3 +47,4 @@ node_modules/
 backend/uploads/
 
 backend/docs.json
+.pytest_cache/

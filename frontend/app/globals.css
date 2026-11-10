@@ -20,58 +20,326 @@
 
   --animate-rise: rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-blink: blink 1.2s ease-in-out infinite;
+  --animate-shiny-text: shiny-text 8s infinite;
   --animate-fly: fly-path 1.9s cubic-bezier(0.45, 0, 0.25, 1) forwards, fly-fade 1.9s linear forwards;
   --animate-trail: trail 2.6s cubic-bezier(0.45, 0, 0.25, 1) forwards;
 
   @keyframes rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: none; }
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes shiny-text {
+
+    0%,
+    90%,
+    100% {
+      background-position: calc(-100% - var(--shiny-width)) 0;
+    }
+
+    30%,
+    60% {
+      background-position: calc(100% + var(--shiny-width)) 0;
+    }
   }
 
   @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.3;
+    }
   }
 
   /* paper plane: moves along its path while fading in and out */
   @keyframes fly-path {
-    from { offset-distance: 0%; }
-    to { offset-distance: 100%; }
+    from {
+      offset-distance: 0%;
+    }
+
+    to {
+      offset-distance: 100%;
+    }
   }
 
   @keyframes fly-fade {
-    0% { opacity: 0; scale: 0.6; }
-    8% { opacity: 1; scale: 1; }
-    88% { opacity: 1; }
-    100% { opacity: 0; scale: 0.8; }
+    0% {
+      opacity: 0;
+      scale: 0.6;
+    }
+
+    8% {
+      opacity: 1;
+      scale: 1;
+    }
+
+    88% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+      scale: 0.8;
+    }
   }
 
   @keyframes trail {
-    0% { stroke-dashoffset: 1; opacity: 1; }
-    73% { stroke-dashoffset: 0; opacity: 1; }
-    100% { stroke-dashoffset: 0; opacity: 0; }
+    0% {
+      stroke-dashoffset: 1;
+      opacity: 1;
+    }
+
+    73% {
+      stroke-dashoffset: 0;
+      opacity: 1;
+    }
+
+    100% {
+      stroke-dashoffset: 0;
+      opacity: 0;
+    }
   }
 }
 
 /* landing demo: one 10 s loop of upload -> summary -> cited answer */
-@keyframes d0 { 0%, 12% { opacity: 1 } 16%, 100% { opacity: 0 } }
-@keyframes dbar { 0% { width: 0 } 12%, 100% { width: 100% } }
-@keyframes d1 { 0%, 14% { opacity: 0; transform: translateY(8px) } 18%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes d2 { 0%, 22% { opacity: 0; transform: translateY(8px) } 26%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes d3 { 0%, 30% { opacity: 0; transform: translateY(8px) } 34%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes d4 { 0%, 38% { opacity: 0; transform: translateY(8px) } 42%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes d5 { 0%, 46% { opacity: 0; transform: translateY(8px) } 50%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes d6 { 0%, 56% { opacity: 0; transform: translateY(8px) } 60%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes d7 { 0%, 62% { opacity: 0 } 65%, 72% { opacity: 1 } 75%, 100% { opacity: 0 } }
-@keyframes d8 { 0%, 74% { opacity: 0; transform: translateY(8px) } 78%, 94% { opacity: 1; transform: none } 100% { opacity: 0 } }
-@keyframes dcite { 0%, 82% { background: #fdf0a6 } 86% { background: #f9d648 } 90%, 100% { background: #fdf0a6 } }
-@keyframes caret { 0%, 100% { opacity: 1 } 50% { opacity: 0 } }
-@keyframes sheen { from { background-position: 200% 0 } to { background-position: -200% 0 } }
-.demo:hover * { animation-play-state: paused !important; }
+@keyframes d0 {
+
+  0%,
+  12% {
+    opacity: 1
+  }
+
+  16%,
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes dbar {
+  0% {
+    width: 0
+  }
+
+  12%,
+  100% {
+    width: 100%
+  }
+}
+
+@keyframes d1 {
+
+  0%,
+  14% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  18%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d2 {
+
+  0%,
+  22% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  26%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d3 {
+
+  0%,
+  30% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  34%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d4 {
+
+  0%,
+  38% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  42%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d5 {
+
+  0%,
+  46% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  50%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d6 {
+
+  0%,
+  56% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  60%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d7 {
+
+  0%,
+  62% {
+    opacity: 0
+  }
+
+  65%,
+  72% {
+    opacity: 1
+  }
+
+  75%,
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes d8 {
+
+  0%,
+  74% {
+    opacity: 0;
+    transform: translateY(8px)
+  }
+
+  78%,
+  94% {
+    opacity: 1;
+    transform: none
+  }
+
+  100% {
+    opacity: 0
+  }
+}
+
+@keyframes dcite {
+
+  0%,
+  82% {
+    background: #fdf0a6
+  }
+
+  86% {
+    background: #f9d648
+  }
+
+  90%,
+  100% {
+    background: #fdf0a6
+  }
+}
+
+@keyframes caret {
+
+  0%,
+  100% {
+    opacity: 1
+  }
+
+  50% {
+    opacity: 0
+  }
+}
+
+@keyframes sheen {
+  from {
+    background-position: 200% 0
+  }
+
+  to {
+    background-position: -200% 0
+  }
+}
+
+.demo:hover * {
+  animation-play-state: paused !important;
+}
 
 /* cards that lift on hover */
-.lift { transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.3s ease; }
-.lift:hover { transform: translateY(-4px); box-shadow: 0 18px 40px -24px rgba(17, 17, 16, 0.35); }
+.lift {
+  transition: transform 0.3s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.3s ease;
+}
+
+.lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px -24px rgba(17, 17, 16, 0.35);
+}
 
 /* dark theme: same names, darker values */
 .dark {

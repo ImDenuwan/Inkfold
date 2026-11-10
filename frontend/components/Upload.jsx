@@ -7,6 +7,7 @@ import { useUser } from "../lib/useUser";
 import { supabase } from "../lib/supabase";
 import { ImageGenerationLoader } from "./ui/ImageGenerationLoader";
 import LandingSections from "./LandingSections";
+import { AnimatedShinyText } from "./ui/animated-shiny-text";
 
 const STEPS = [
   "Reading every page",
@@ -143,10 +144,10 @@ export default function Upload({ onUploaded }) {
 
   return (
     <section className="flex flex-col items-center pt-6 text-center sm:pt-12">
-      <span className="animate-rise rounded-full border border-line bg-card px-4 py-1.5 text-sm text-muted">
-        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-accent" />
-        AI research assistant for papers
+      <span className="inline-flex animate-rise items-center gap-2 rounded-full border border-line bg-card px-4 py-1.5 text-sm">
+        <AnimatedShinyText>✨ AI research assistant for papers</AnimatedShinyText>
       </span>
+
 
       <h1
         className="mt-6 max-w-4xl animate-rise text-balance font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
@@ -170,9 +171,8 @@ export default function Upload({ onUploaded }) {
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        className={`mt-10 block w-full max-w-xl animate-rise cursor-pointer rounded-3xl border-2 border-dashed bg-card px-6 py-12 transition hover:-translate-y-1 hover:shadow-lg ${
-          dragging ? "border-accent bg-accent-soft" : "border-line"
-        }`}
+        className={`mt-10 block w-full max-w-xl animate-rise cursor-pointer rounded-3xl border-2 border-dashed bg-card px-6 py-12 transition hover:-translate-y-1 hover:shadow-lg ${dragging ? "border-accent bg-accent-soft" : "border-line"
+          }`}
         style={{ animationDelay: "240ms" }}
       >
         <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper">
